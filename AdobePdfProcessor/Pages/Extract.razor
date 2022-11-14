@@ -1,0 +1,140 @@
+﻿@page "/extract"
+@using System.IO
+@using CsvHelper
+@using DataLibrary.DbAccess
+@using DataLibrary.DbServices
+@using DataLibrary.HttpClients
+@using DataLibrary.Models
+@using DataLibrary.Services
+@using Microsoft.AspNetCore.Http
+@using System.Globalization
+@using System.Text.Json
+@using System.IO.Compression;
+@inject GetUploadUri getUploadUri
+@inject UploadPdf uploadPdf
+@inject ExtractPdf extractPdf
+@inject GetDownloadStatus getDownloadStatus
+@inject DownloadPdf downloadPdf
+@inject IDataContext dataContext
+@inject IAddressDataServiceFactory addressDataServiceFactory
+
+<div class="row mb-3 mt-3">
+    <div class="container">
+        <div>
+            <InputFile OnChange="OnInputFileChange" multiple></InputFile>
+            <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
+            <button class="btn btn-secondary" type="submit" @onclick="Process">Process</button>
+        </div>
+        @if(selectedFiles is not null)
+        {
+            <div class="row mb-3 mt-3">
+                @foreach (var file in files)
+                {
+                    <div class="table-striped">
+                        <p>@file.File.Name</p>
+                        <p>@file.File.ContentType</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<IBrowserFile>? selectedFiles;
+    private List<FileModel> files = new();
+    private string Message = "No file(s) selected";
+    private long maxAllowedBufferSize = 1024 * 1024 * 200;
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        if(files.Count > 0)
+        { 
+            files = new(); 
+        }
+        selectedFiles = e.GetMultipleFiles();
+        foreach(var selectedFile in selectedFiles)
+        {
+            FileModel file = new();
+            file.File = selectedFile;
+            files.Add(file);
+        }
+        Message = $"{files.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+    private async void UploadToLocal()
+    {
+        foreach (var file in files)
+        {
+            Stream stream = file.File.OpenReadStream(maxAllowedBufferSize);
+            file.UploadPath = Directory.GetCurrentDirectory() + @"\wwwroot\data\" + "uploadId_" + Guid.NewGuid().ToString() + "_" + file.File.Name;
+            FileStream fileStream = File.Create(file.UploadPath);
+            await stream.CopyToAsync(fileStream);
+            fileStream.Close();
+            fileStream.Dispose();
+            stream.Close();
+            stream.Dispose();
+        }
+        Message = $"{files.Count} file(s) uploaded on server";
+        this.StateHasChanged();
+    }
+    private async void Process()
+    {
+        foreach (var file in files)
+        {
+            var uploadUriResponse = await getUploadUri.Upload();
+            var uploadUriResponseString = await uploadUriResponse.Content.ReadAsStringAsync();
+            var uploadUriResponseObject = JsonSerializer.Deserialize<FileModel>(uploadUriResponseString);
+            file.UploadUri = uploadUriResponseObject.UploadUri;
+            file.AssetId = uploadUriResponseObject.AssetId;
+            var resup = await uploadPdf.Upload(file).ConfigureAwait(false);
+            var resUpString = await resup.Content.ReadAsStringAsync();
+            var resExt = await extractPdf.Extract(file).ConfigureAwait(false);
+            file.DownloadCheckLocation = resExt.Headers.Location;
+            var resExtString = await resExt.Content.ReadAsStringAsync();
+            JobStatusModel jsm;
+            do
+            {
+                await Task.Delay(2000);
+                var getDownloadStatusResponse = await getDownloadStatus.GetStatus(file).ConfigureAwait(false);
+                var getDownloadStatusResponseString = await getDownloadStatusResponse.Content.ReadAsStringAsync();
+                jsm = JsonSerializer.Deserialize<JobStatusModel>(getDownloadStatusResponseString);
+            } while (jsm.Status != "done");
+
+            file.DownloadUri = jsm.Resource.DownloadUri;
+            var fileResponse = await downloadPdf.Download(file).ConfigureAwait(false);
+            var data = await fileResponse.Content.ReadAsByteArrayAsync();
+            file.ZipPath = file.UploadPath.Replace(".pdf", ".zip");
+
+            using var memStream = new MemoryStream(data);
+            using var filestream = new FileStream(file.ZipPath, FileMode.Create);
+            await memStream.CopyToAsync(filestream);
+            filestream.Close();
+
+            ZipFile.ExtractToDirectory(file.ZipPath, Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\");
+            File.Delete(file.UploadPath);
+            File.Delete(file.ZipPath);
+            File.Delete(@"C:\Users\Jason\source\repos\AdobePdfProcessorApp\AdobePdfProcessor\wwwroot\data\zipData\structuredData.json");
+
+            file.CsvPath = Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\" + "fileoutpart0.csv";
+            using (var streamReader = new StreamReader(file.CsvPath))
+            {
+                using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+                {
+                    csvReader.Context.RegisterClassMap<AddressClassMap>();
+                    while (csvReader.Read())
+                    {
+                        using (var uow = dataContext.CreateUnitOfWork())
+                        {
+                            var record = csvReader.GetRecord<AddressModel>();
+                            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+                            await addressDataService.CreateOrUpdateAddress(record);
+                        }
+                    }
+                }
+            }
+            var tableDirectory = new DirectoryInfo(Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\");
+            tableDirectory.Delete(true);
+        }
+    }
+}
