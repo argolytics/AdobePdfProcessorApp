@@ -5,7 +5,7 @@ using DataLibrary.HttpClients;
 using DataLibrary.Settings;
 using System.Net.Http.Headers;
 
-namespace GroundRentProcessor;
+namespace AdobePdfProcessor;
 
 public class Program
 {
