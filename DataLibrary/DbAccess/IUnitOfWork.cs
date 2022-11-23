@@ -1,13 +1,12 @@
-﻿using System.Data.SqlClient;
+﻿using System.Data;
 
-namespace DataLibrary.DbAccess;
-
-public interface IUnitOfWork : IDisposable
+namespace DataLibrary.DbAccess
 {
-    SqlConnection Connection { get; }
-    bool IsDisposed { get; }
-    SqlTransaction Transaction { get; }
-    void BeginTransaction();
-    Task CommitAsync();
-    Task RollbackAsync();
+    public interface IUnitOfWork
+    {
+        IDbConnection Connection { get; }
+        IDbTransaction Transaction { get; }
+        void Commit();
+        void Dispose();
+    }
 }

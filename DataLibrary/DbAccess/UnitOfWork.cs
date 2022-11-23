@@ -1,70 +1,35 @@
-﻿using System.Data.SqlClient;
+﻿using System.Data;
 
 namespace DataLibrary.DbAccess;
 
 public class UnitOfWork : IUnitOfWork
 {
-    private SqlTransaction _transaction;
-    private SqlConnection _connection;
-    private bool _commitCalled;
+    private readonly IDbConnection _connection;
+    private IDbTransaction _transaction;
+    public IDbConnection Connection { get { return _connection; } }
+    public IDbTransaction Transaction { get { return _transaction; } }
 
-    public UnitOfWork(SqlConnection connection)
+    internal UnitOfWork(IDbConnection connection)
     {
-        this._connection = connection;
-        this._commitCalled = false;
+        _connection = connection;
+        _transaction = _connection.BeginTransaction();
     }
-
-    public bool IsDisposed { get; internal set; }
-
-    public SqlConnection Connection => _connection;
-
-    public SqlTransaction Transaction => this._transaction;
-
-    public void BeginTransaction()
+    public void Commit()
     {
-        _connection = new SqlConnection("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=DataLibraryDb;Integrated Security=True;Connect Timeout=60;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
-        this._transaction = this._connection.BeginTransaction();
+        try
+        {
+            _transaction.Commit();
+            _transaction = _connection.BeginTransaction();
+        }
+        catch (Exception)
+        {
+            _transaction.Rollback();
+        }
     }
-
-    public Task CommitAsync()
-    {
-        this._commitCalled = true;
-        if (this._transaction != null)
-            return _transaction.CommitAsync();
-
-        return Task.CompletedTask;
-    }
-
     public void Dispose()
     {
-        this.IsDisposed = true;
-        if (this._transaction != null)
-        {
-            if (!this._commitCalled)
-            {
-                try
-                {
-                    this._transaction.Rollback();
-                }
-                catch (Exception e)
-                {
-
-                }
-            }
-            this._transaction.Dispose();
-        }
-        if (this._connection != null)
-        {
-            this._connection.Dispose();
-        }
-    }
-
-    public Task RollbackAsync()
-    {
-        if (this._transaction != null)
-            return _transaction.RollbackAsync();
-
-        return Task.CompletedTask;
+        _transaction.Connection?.Close();
+        _transaction.Connection?.Dispose();
+        _transaction.Dispose();
     }
 }
-

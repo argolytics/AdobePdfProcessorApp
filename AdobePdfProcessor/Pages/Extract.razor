@@ -1,15 +1,16 @@
 ﻿@page "/extract"
 @using System.IO
-@using CsvHelper
+@using System.Text
+@using System.Globalization
+@using System.Text.Json
+@using System.IO.Compression;
+@using Microsoft.AspNetCore.Http
 @using DataLibrary.DbAccess
 @using DataLibrary.DbServices
 @using DataLibrary.HttpClients
 @using DataLibrary.Models
 @using DataLibrary.Services
-@using Microsoft.AspNetCore.Http
-@using System.Globalization
-@using System.Text.Json
-@using System.IO.Compression;
+@using CsvHelper
 @inject GetUploadUri getUploadUri
 @inject UploadPdf uploadPdf
 @inject ExtractPdf extractPdf
@@ -23,7 +24,9 @@
         <div>
             <InputFile OnChange="OnInputFileChange" multiple></InputFile>
             <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
-            <button class="btn btn-secondary" type="submit" @onclick="Process">Process</button>
+            @*<button class="btn btn-secondary" type="submit" @onclick="ProcessAdobePDF">ProcessAdobePDF</button>*@
+            
+            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFile">ProcessSpecPrintFile</button>
         </div>
         @if(selectedFiles is not null)
         {
@@ -44,7 +47,7 @@
     private IReadOnlyList<IBrowserFile>? selectedFiles;
     private List<FileModel> files = new();
     private string Message = "No file(s) selected";
-    private long maxAllowedBufferSize = 1024 * 1024 * 200;
+    private long maxAllowedBufferSize = 1024 * 1024 * 500;
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -78,63 +81,116 @@
         Message = $"{files.Count} file(s) uploaded on server";
         this.StateHasChanged();
     }
-    private async void Process()
+    //private async void ProcessAdobePDF()
+    //{
+    //    foreach (var file in files)
+    //    {
+    //        var uploadUriResponse = await getUploadUri.Upload();
+    //        var uploadUriResponseString = await uploadUriResponse.Content.ReadAsStringAsync();
+    //        var uploadUriResponseObject = JsonSerializer.Deserialize<FileModel>(uploadUriResponseString);
+    //        file.UploadUri = uploadUriResponseObject.UploadUri;
+    //        file.AssetId = uploadUriResponseObject.AssetId;
+    //        var resup = await uploadPdf.Upload(file).ConfigureAwait(false);
+    //        var resUpString = await resup.Content.ReadAsStringAsync();
+    //        var resExt = await extractPdf.Extract(file).ConfigureAwait(false);
+    //        file.DownloadCheckLocation = resExt.Headers.Location;
+    //        var resExtString = await resExt.Content.ReadAsStringAsync();
+    //        JobStatusModel jsm;
+    //        do
+    //        {
+    //            await Task.Delay(2000);
+    //            var getDownloadStatusResponse = await getDownloadStatus.GetStatus(file).ConfigureAwait(false);
+    //            var getDownloadStatusResponseString = await getDownloadStatusResponse.Content.ReadAsStringAsync();
+    //            jsm = JsonSerializer.Deserialize<JobStatusModel>(getDownloadStatusResponseString);
+    //        } while (jsm.Status != "done");
+
+    //        file.DownloadUri = jsm.Resource.DownloadUri;
+    //        var fileResponse = await downloadPdf.Download(file).ConfigureAwait(false);
+    //        var data = await fileResponse.Content.ReadAsByteArrayAsync();
+    //        file.ZipPath = file.UploadPath.Replace(".pdf", ".zip");
+
+    //        using var memStream = new MemoryStream(data);
+    //        using var filestream = new FileStream(file.ZipPath, FileMode.Create);
+    //        await memStream.CopyToAsync(filestream);
+    //        filestream.Close();
+
+    //        ZipFile.ExtractToDirectory(file.ZipPath, Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\");
+    //        File.Delete(file.UploadPath);
+    //        File.Delete(file.ZipPath);
+    //        File.Delete(@"C:\Users\Jason\source\repos\AdobePdfProcessorApp\AdobePdfProcessor\wwwroot\data\zipData\structuredData.json");
+
+    //        file.CsvPath = Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\" + "fileoutpart0.csv";
+    //        using (var streamReader = new StreamReader(file.CsvPath))
+    //        {
+    //            using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+    //            {
+    //                csvReader.Context.RegisterClassMap<AddressClassMap>();
+    //                while (csvReader.Read())
+    //                {
+    //                    using (var uow = dataContext.CreateUnitOfWork())
+    //                    {
+    //                        var record = csvReader.GetRecord<AddressModel>();
+    //                        var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+    //                        await addressDataService.CreateOrUpdateSDAT(record);
+    //                    }
+    //                }
+    //            }
+    //        }
+    //        var tableDirectory = new DirectoryInfo(Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\");
+    //        tableDirectory.Delete(true);
+    //    }
+    //}
+    private async void ProcessSpecPrintFile()
     {
         foreach (var file in files)
         {
-            var uploadUriResponse = await getUploadUri.Upload();
-            var uploadUriResponseString = await uploadUriResponse.Content.ReadAsStringAsync();
-            var uploadUriResponseObject = JsonSerializer.Deserialize<FileModel>(uploadUriResponseString);
-            file.UploadUri = uploadUriResponseObject.UploadUri;
-            file.AssetId = uploadUriResponseObject.AssetId;
-            var resup = await uploadPdf.Upload(file).ConfigureAwait(false);
-            var resUpString = await resup.Content.ReadAsStringAsync();
-            var resExt = await extractPdf.Extract(file).ConfigureAwait(false);
-            file.DownloadCheckLocation = resExt.Headers.Location;
-            var resExtString = await resExt.Content.ReadAsStringAsync();
-            JobStatusModel jsm;
-            do
+            int rows = 0;
+            int chunks = 0;
+            int errors = 0;
+
+            foreach (var chunk in File.ReadLines(file.UploadPath).Chunk(1000))
             {
-                await Task.Delay(2000);
-                var getDownloadStatusResponse = await getDownloadStatus.GetStatus(file).ConfigureAwait(false);
-                var getDownloadStatusResponseString = await getDownloadStatusResponse.Content.ReadAsStringAsync();
-                jsm = JsonSerializer.Deserialize<JobStatusModel>(getDownloadStatusResponseString);
-            } while (jsm.Status != "done");
-
-            file.DownloadUri = jsm.Resource.DownloadUri;
-            var fileResponse = await downloadPdf.Download(file).ConfigureAwait(false);
-            var data = await fileResponse.Content.ReadAsByteArrayAsync();
-            file.ZipPath = file.UploadPath.Replace(".pdf", ".zip");
-
-            using var memStream = new MemoryStream(data);
-            using var filestream = new FileStream(file.ZipPath, FileMode.Create);
-            await memStream.CopyToAsync(filestream);
-            filestream.Close();
-
-            ZipFile.ExtractToDirectory(file.ZipPath, Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\");
-            File.Delete(file.UploadPath);
-            File.Delete(file.ZipPath);
-            File.Delete(@"C:\Users\Jason\source\repos\AdobePdfProcessorApp\AdobePdfProcessor\wwwroot\data\zipData\structuredData.json");
-
-            file.CsvPath = Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\" + "fileoutpart0.csv";
-            using (var streamReader = new StreamReader(file.CsvPath))
-            {
-                using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+                IUnitOfWork uow = dataContext.CreateUnitOfWork();
+                try
                 {
-                    csvReader.Context.RegisterClassMap<AddressClassMap>();
-                    while (csvReader.Read())
+                    foreach (var line in chunk)
                     {
-                        using (var uow = dataContext.CreateUnitOfWork())
-                        {
-                            var record = csvReader.GetRecord<AddressModel>();
-                            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                            await addressDataService.CreateOrUpdateAddress(record);
-                        }
+                        var accountId = line.Substring(0, 12).Replace(" ", "");
+                        var capitalizedGroundRent1String = line.Substring(579, 5).Trim();
+                        var capitalizedGroundRent2String = line.Substring(710, 5).Trim();
+                        var capitalizedGroundRent3String = line.Substring(841, 5).Trim();
+                        //var testRead = line.Substring(585, 18);
+
+                        int.TryParse(capitalizedGroundRent1String, out int capitalizedGroundRent1);
+                        int.TryParse(capitalizedGroundRent2String, out int capitalizedGroundRent2);
+                        int.TryParse(capitalizedGroundRent3String, out int capitalizedGroundRent3);
+
+                        AddressModel addressModel = new();
+                        addressModel.accountId = accountId;
+                        addressModel.CapitalizedGroundRent1Amount = capitalizedGroundRent1;
+                        addressModel.CapitalizedGroundRent2Amount = capitalizedGroundRent2;
+                        addressModel.CapitalizedGroundRent3Amount = capitalizedGroundRent3;
+
+                        var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+                        await addressDataService.CreateOrUpdateSpecPrint(addressModel);
+
+                        // rows++;
+                        // Console.WriteLine($"{rows} rows read");
                     }
                 }
+                catch (Exception)
+                {
+                    errors++; // Not sure where errors are originating yet, so for now we have a count
+                }
+                finally
+                {
+                    uow.Dispose();
+                }
+                chunks++;
+                Console.WriteLine($"{chunks} chunks processed");
             }
-            var tableDirectory = new DirectoryInfo(Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\");
-            tableDirectory.Delete(true);
+            File.Delete(file.UploadPath);
+            Console.WriteLine($"{errors} errors found");
         }
     }
 }

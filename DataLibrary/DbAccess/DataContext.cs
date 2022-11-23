@@ -4,11 +4,11 @@ namespace DataLibrary.DbAccess;
 
 public class DataContext : IDataContext
 {
-    private string _connectionString;
+    private readonly string _connectionString;
 
     public DataContext(string connectionString)
     {
-        this._connectionString = connectionString;
+        _connectionString = connectionString;
     }
 
     public IUnitOfWork CreateUnitOfWork()

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[spAddress_CreateOrUpdate]
+﻿CREATE PROCEDURE [dbo].[spAddress_CreateOrUpdateSDAT]
 	@AccountId NVARCHAR(50),
 	@IsRedeemed BIT
 AS

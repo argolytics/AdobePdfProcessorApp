@@ -64,11 +64,10 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Address.sql" />
-    <Build Include="dbo\Stored Procedures\spAddress_Create.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_Delete.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\spAddress_Update.sql" />
-    <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdate.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdateSDAT.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdateSpecPrint.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GroundRentProcessorDb.publish.xml" />
