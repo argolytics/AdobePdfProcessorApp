@@ -3,6 +3,7 @@
 @using CsvHelper
 @using DataLibrary.DbAccess
 @using DataLibrary.DbServices
+@using DataLibrary.Helpers
 @using DataLibrary.HttpClients
 @using DataLibrary.Models
 @using DataLibrary.Services
@@ -15,6 +16,7 @@
 @inject ExtractPdf extractPdf
 @inject GetDownloadStatus getDownloadStatus
 @inject DownloadPdf downloadPdf
+@inject IRealPropertySearchScraper scraper
 @inject IDataContext dataContext
 @inject IAddressDataServiceFactory addressDataServiceFactory
 
@@ -23,7 +25,9 @@
         <div>
             <InputFile OnChange="OnInputFileChange" multiple></InputFile>
             <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
-            <button class="btn btn-secondary" type="submit" @onclick="Process">Process</button>
+            <button class="btn btn-secondary" type="submit" @onclick="ProcessAdobePDF">ProcessAdobePDF</button>
+            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFile">ProcessSpecPrintFile</button>
+            <button class="btn btn-danger" type="submit" @onclick="ScrapeSDATRealPropertySearch">Scrape</button>
         </div>
         @if(selectedFiles is not null)
         {
@@ -78,7 +82,7 @@
         Message = $"{files.Count} file(s) uploaded on server";
         this.StateHasChanged();
     }
-    private async void Process()
+    private async void ProcessAdobePDF()
     {
         foreach (var file in files)
         {
@@ -95,11 +99,12 @@
             JobStatusModel jsm;
             do
             {
-                await Task.Delay(2000);
+                await Task.Delay(10000);
                 var getDownloadStatusResponse = await getDownloadStatus.GetStatus(file).ConfigureAwait(false);
                 var getDownloadStatusResponseString = await getDownloadStatusResponse.Content.ReadAsStringAsync();
                 jsm = JsonSerializer.Deserialize<JobStatusModel>(getDownloadStatusResponseString);
-            } while (jsm.Status != "done");
+            } 
+            while (jsm.Status != "done");
 
             file.DownloadUri = jsm.Resource.DownloadUri;
             var fileResponse = await downloadPdf.Download(file).ConfigureAwait(false);
@@ -121,14 +126,35 @@
             {
                 using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
                 {
-                    csvReader.Context.RegisterClassMap<AddressClassMap>();
                     while (csvReader.Read())
                     {
                         using (var uow = dataContext.CreateUnitOfWork())
                         {
-                            var record = csvReader.GetRecord<AddressModel>();
-                            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                            await addressDataService.CreateOrUpdateAddress(record);
+                            if (csvReader.Parser.RawRow > 0)
+                            {
+                                var rowArray = csvReader.Parser.RawRecord.Split(',');
+                                var accountId = rowArray[0].Replace(" ", "");
+                                bool isRedeemed;
+                                if (rowArray[2].Contains("PAY"))
+                                {
+                                    isRedeemed = true;
+                                }
+                                else
+                                {
+                                    isRedeemed = false; 
+                                }
+                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+                                // read address from db, if address.YearBuilt > 0, if address.LandUseCode == "R"
+                                await addressDataService.CreateOrUpdateFromSDATRedeemedFile(new AddressModel()
+                                    {
+                                        AccountId = accountId,
+                                        IsRedeemed = isRedeemed
+                                    });
+                            }
+                            else
+                            {
+                                continue;
+                            }
                         }
                     }
                 }
@@ -136,5 +162,66 @@
             var tableDirectory = new DirectoryInfo(Directory.GetCurrentDirectory() + @"\wwwroot\data\zipData\tables\");
             tableDirectory.Delete(true);
         }
+    }
+    private async void ProcessSpecPrintFile()
+    {
+        foreach (var file in files)
+        {
+            using (var streamReader = new StreamReader(file.UploadPath))
+            {
+                using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+                {
+                    csvReader.Read();
+
+                    while (csvReader.Read())
+                    {
+                        using (var uow = dataContext.CreateUnitOfWork())
+                        {
+                            var landUseCode = csvReader.Parser.RawRecord.Substring(428, 1);
+                            var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
+                            var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
+
+                            if(landUseCode == "E" && yearBuiltInt <= 2014 && yearBuiltInt > 0)
+                            {
+                                var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
+                                var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
+                                var section = csvReader.Parser.RawRecord.Substring(390, 2).Replace(" ", "");
+                                var block = csvReader.Parser.RawRecord.Substring(392, 5).Replace(" ", "");
+                                var lot = csvReader.Parser.RawRecord.Substring(398, 4).Replace(" ", "");
+
+                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+                                await addressDataService.CreateOrUpdateFromSpecPrintFile(
+                                new AddressModel()
+                                    {
+                                        AccountId = accountId,
+                                        Ward = ward,
+                                        Section = section,
+                                        Block = block,
+                                        Lot = lot,
+                                        LandUseCode = landUseCode,
+                                        YearBuilt = yearBuiltInt
+                                    });
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            File.Delete(file.UploadPath);
+        }
+    }
+    private async Task ScrapeSDATRealPropertySearch()
+    {
+        List<AddressModel> addressList;
+        using (var uow = dataContext.CreateUnitOfWork())
+        {
+            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+            addressList = await addressDataService.ReadAddressFirst10WhereIsGroundRentNull();
+        }
+        await scraper.Scrape(addressList);
+        Console.WriteLine("Scrape complete.");
     }
 }

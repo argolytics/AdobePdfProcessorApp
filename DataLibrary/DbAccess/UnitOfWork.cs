@@ -6,26 +6,20 @@ public class UnitOfWork : IUnitOfWork
 {
     private SqlTransaction _transaction;
     private SqlConnection _connection;
+    public SqlConnection Connection => _connection;
+    public SqlTransaction Transaction => this._transaction;
     private bool _commitCalled;
+    public bool IsDisposed { get; internal set; }
 
     public UnitOfWork(SqlConnection connection)
     {
         this._connection = connection;
         this._commitCalled = false;
     }
-
-    public bool IsDisposed { get; internal set; }
-
-    public SqlConnection Connection => _connection;
-
-    public SqlTransaction Transaction => this._transaction;
-
     public void BeginTransaction()
     {
-        _connection = new SqlConnection("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=DataLibraryDb;Integrated Security=True;Connect Timeout=60;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
         this._transaction = this._connection.BeginTransaction();
     }
-
     public Task CommitAsync()
     {
         this._commitCalled = true;
@@ -34,7 +28,6 @@ public class UnitOfWork : IUnitOfWork
 
         return Task.CompletedTask;
     }
-
     public void Dispose()
     {
         this.IsDisposed = true;
@@ -58,7 +51,6 @@ public class UnitOfWork : IUnitOfWork
             this._connection.Dispose();
         }
     }
-
     public Task RollbackAsync()
     {
         if (this._transaction != null)

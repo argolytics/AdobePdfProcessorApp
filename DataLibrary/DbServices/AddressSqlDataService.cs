@@ -13,30 +13,59 @@ public class AddressSqlDataService : IAddressDataService
     {
         _unitOfWork = unitOfWork;
     }
-    public async Task CreateOrUpdateAddress(AddressModel addressModel)
+    public async Task CreateOrUpdateFromSpecPrintFile(AddressModel addressModel)
+    {
+        var parms = new
+        {
+            addressModel.AccountId,
+            addressModel.Ward,
+            addressModel.Section,
+            addressModel.Block,
+            addressModel.Lot,
+            addressModel.LandUseCode,
+            addressModel.YearBuilt
+        };
+        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSpecPrintFile", parms,
+            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
+    }
+    public async Task CreateOrUpdateFromSDATRedeemedFile(AddressModel addressModel)
     {
         var parms = new
         {
             addressModel.AccountId,
             addressModel.IsRedeemed
         };
-        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdate", parms,
+        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATRedeemedFile", parms,
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
     }
-    public async Task<AddressModel> ReadAddressById(int accountId)
+    public async Task<bool> CreateOrUpdateFromSDATIsGroundRent(AddressModel addressModel)
     {
-        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadById", new { AccountId = accountId },
+        try
+        {
+            var parms = new
+            {
+                addressModel.AccountId,
+                addressModel.IsGroundRent
+            };
+            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATIsGroundRent", parms,
+                commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return false;
+        }
+    }
+    public async Task<AddressModel> ReadAddressByAccountId(int accountId)
+    {
+        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadByAccountId", new { AccountId = accountId },
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).FirstOrDefault();
     }
-    public async Task UpdateAddress(AddressModel addressModel)
+    public async Task<List<AddressModel>> ReadAddressFirst10WhereIsGroundRentNull()
     {
-        var parms = new
-        {
-            addressModel.AccountId,
-            addressModel.IsRedeemed
-        };
-        await _unitOfWork.Connection.ExecuteAsync("spAddress_Update", parms,
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
+        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadFirst10WhereIsGroundRentNull", null,
+            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
     }
     public async Task DeleteAddress(int accountId)
     {

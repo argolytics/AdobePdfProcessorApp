@@ -66,9 +66,12 @@
     <Build Include="dbo\Tables\Address.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_Create.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_Delete.sql" />
-    <Build Include="dbo\Stored Procedures\spAddress_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\spAddress_Update.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_ReadByAccountId.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdateSDATRedeemedFile.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdateSpecPrintFile.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdate.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_CreateOrUpdateSDATIsGroundRent.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_ReadFirst10WhereIsGroundRentNull.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GroundRentProcessorDb.publish.xml" />
