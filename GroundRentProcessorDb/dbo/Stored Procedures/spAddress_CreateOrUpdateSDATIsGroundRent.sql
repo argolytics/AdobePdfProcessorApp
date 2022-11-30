@@ -10,14 +10,14 @@ BEGIN
 BEGIN
 	UPDATE dbo.[Address] SET
 	[AccountId] = @AccountId,
-    [IsRedeemed] = @IsGroundRent
+    [IsGroundRent] = @IsGroundRent
 	WHERE [AccountId] = @AccountId
 END
 ELSE
 BEGIN
 	INSERT INTO dbo.[Address](
 	[AccountId],
-    [IsRedeemed])
+    [IsGroundRent])
 
 	VALUES(
 	@AccountId,

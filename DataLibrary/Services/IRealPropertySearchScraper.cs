@@ -1,9 +1,9 @@
 ﻿using DataLibrary.Models;
 
-namespace DataLibrary.Services
+namespace DataLibrary.Services;
+
+public interface IRealPropertySearchScraper
 {
-    public interface IRealPropertySearchScraper
-    {
-        Task Scrape(List<AddressModel> addressList);
-    }
+    Task AllocateWebDrivers(List<AddressModel> chromeAddressList, List<AddressModel> edgeAddressList);
+    Task Scrape(WebDriverModel webDriverModel);
 }

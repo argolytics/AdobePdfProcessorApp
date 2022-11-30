@@ -13,10 +13,9 @@ public class DataContext : IDataContext
 
     public IUnitOfWork CreateUnitOfWork()
     {
-        var connection = new SqlConnection(_connectionString);
+        var connection = new SqlConnection(this._connectionString);
 
         connection.Open();
         return new UnitOfWork(connection);
     }
 }
-

@@ -27,7 +27,6 @@
             <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
             <button class="btn btn-secondary" type="submit" @onclick="ProcessAdobePDF">ProcessAdobePDF</button>
             <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFile">ProcessSpecPrintFile</button>
-            <button class="btn btn-danger" type="submit" @onclick="ScrapeSDATRealPropertySearch">Scrape</button>
         </div>
         @if(selectedFiles is not null)
         {
@@ -212,16 +211,5 @@
             }
             File.Delete(file.UploadPath);
         }
-    }
-    private async Task ScrapeSDATRealPropertySearch()
-    {
-        List<AddressModel> addressList;
-        using (var uow = dataContext.CreateUnitOfWork())
-        {
-            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            addressList = await addressDataService.ReadAddressFirst10WhereIsGroundRentNull();
-        }
-        await scraper.Scrape(addressList);
-        Console.WriteLine("Scrape complete.");
     }
 }

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[spAddress_ReadFirst10WhereIsGroundRentNull]
+﻿CREATE PROCEDURE [dbo].[spAddress_ReadTop10WhereIsGroundRentNull]
 AS
 begin
 	select top 10 [AccountId], [Ward], [Section], [Block], [Lot]

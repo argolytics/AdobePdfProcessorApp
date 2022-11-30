@@ -1,93 +1,157 @@
 ﻿using DataLibrary.DbAccess;
 using DataLibrary.DbServices;
 using DataLibrary.Models;
+using Microsoft.AspNetCore.SignalR;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Edge;
 
 namespace DataLibrary.Services;
 
 public class RealPropertySearchScraper : IRealPropertySearchScraper
 {
-    private readonly DataContext _dataContext;
+    private readonly IDataContext _dataContext;
     private readonly IAddressDataServiceFactory _addressDataServiceFactory;
-    private WebDriver WebDriver { get; set; } = null;
-    private string DriverPath { get; set; } = @"C:\ChromeDriver\chromedriver.exe";
+    private readonly HubConnectionContext _context;
+    private WebDriver ChromeDriver { get; set; } = null;
+    private WebDriver EdgeDriver { get; set; } = null;
+    private IWebElement ChromeInput { get; set; }
+    private IWebElement EdgeInput { get; set; }
+    private List<WebDriverModel> WebDriverList { get; set; } = new();
+    private string ChromeDriverPath { get; set; } = @"C:\ChromeDriver\chromedriver.exe";
+    private string EdgeDriverPath { get; set; } = @"C:\EdgeDriver\msedgedriver.exe";
     private string BaseUrl { get; set; } = "https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx";
+    private bool IsConnected { get; set; }
+
     public RealPropertySearchScraper(
-        DataContext dataContext,
+        IDataContext dataContext,
         IAddressDataServiceFactory addressDataServiceFactory)
     {
         _dataContext = dataContext;
         _addressDataServiceFactory = addressDataServiceFactory;
-        var options = new ChromeOptions();
-        options.AddArguments("--headless");
-        WebDriver = new ChromeDriver(DriverPath, options, TimeSpan.FromSeconds(300));
-        WebDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(120);
+
+        var chromeOptions = new ChromeOptions();
+        chromeOptions.AddArguments("--headless");
+        ChromeDriver = new ChromeDriver(ChromeDriverPath, chromeOptions, TimeSpan.FromSeconds(30));
+        ChromeDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+
+        var edgeOptions = new EdgeOptions();
+        edgeOptions.AddArguments("--headless");
+        EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
+        EdgeDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
     }
-    public async Task Scrape(List<AddressModel> addressList)
+    public async Task AllocateWebDrivers(List<AddressModel> chromeAddressList, List<AddressModel> edgeAddressList)
     {
-        // Selecting "BALTIMORE CITY"
-        Thread.Sleep(300);
-        WebDriver.Navigate().GoToUrl(BaseUrl);
-        var input = WebDriver.FindElement(By.XPath("/html/body/form/div[4]/div[4]/div/div/main/div[3]/div/div/table/tbody/tr[1]/td/div/div/fieldset/div[1]/div[2]/select/option[4]"));
-        input.Click();
-
-        // Selecting "PROPERTY ACCOUNT IDENTIFIER"
-        Thread.Sleep(300);
-        input = WebDriver.FindElement(By.XPath("/html/body/form/div[4]/div[4]/div/div/main/div[3]/div/div/table/tbody/tr[1]/td/div/div/fieldset/div[2]/div[2]/select/option[3]"));
-        input.Click();
-
-        // Click Continue button
-        Thread.Sleep(300);
-        input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StartNavigationTemplateContainerID_btnContinue\"]"));
-        input.Click();
-        Thread.Sleep(3000);
-
-        foreach (var address in addressList)
+        WebDriverModel chromeDriverModel = new WebDriverModel 
+        { 
+            Driver = ChromeDriver,
+            Input = ChromeInput,
+            AddressList = chromeAddressList
+        };
+        WebDriverModel edgeDriverModel = new WebDriverModel
         {
-            // Input Ward
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtWard\"]"));
-            input.Clear();
-            input.SendKeys("01");
+            Driver = EdgeDriver,
+            Input = EdgeInput,
+            AddressList = edgeAddressList
+        };
+        WebDriverList.Add(chromeDriverModel);
+        WebDriverList.Add(edgeDriverModel);
 
-            // Input Section
-            Thread.Sleep(300);
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtSection\"]"));
-            input.Clear();
-            input.SendKeys("01");
+        foreach (var webDriverModel in WebDriverList)
+        {
+            await Scrape(webDriverModel);
+        }
+    }
+    public async Task Scrape(WebDriverModel webDriverModel)
+    {
+        int currentCount;
+        var totalCount = webDriverModel.AddressList.Count;
 
-            // Input Block
-            Thread.Sleep(300);
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtBlock\"]"));
-            input.Clear();
-            input.SendKeys("1738");
-
-            // Input Lot
-            Thread.Sleep(300);
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtLot\"]"));
-            input.Clear();
-            input.SendKeys("001");
-
-            // Click Next button
-            Thread.Sleep(300);
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton\"]"));
-            input.Click();
-            Thread.Sleep(3000);
-
-            // Click Ground Rent Registration link
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucDetailsSearch_dlstDetaisSearch_lnkGroundRentRegistration_0\"]"));
-            input.Click();
-            Thread.Sleep(3000);
-
-            // Condition: check if html has ground rent error tag (meaning property has no ground rent registered)
-            input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr\"]"));
-            bool result;
-            if (input != null)
+        try
+        {
+            Console.WriteLine($"{webDriverModel.Driver} begin...");
+            foreach (var address in webDriverModel.AddressList)
             {
-                if (input.Text.Contains("There is currently no ground rent"))
+                currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
+                Thread.Sleep(2000);
+                // Selecting "BALTIMORE CITY"
+                webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("/html/body/form/div[4]/div[4]/div/div/main/div[3]/div/div/table/tbody/tr[1]/td/div/div/fieldset/div[1]/div[2]/select/option[4]"));
+                webDriverModel.Input.Click();
+
+                // Selecting "PROPERTY ACCOUNT IDENTIFIER"
+                Thread.Sleep(200);
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("/html/body/form/div[4]/div[4]/div/div/main/div[3]/div/div/table/tbody/tr[1]/td/div/div/fieldset/div[2]/div[2]/select/option[3]"));
+                webDriverModel.Input.Click();
+
+                // Click Continue button
+                Thread.Sleep(200);
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StartNavigationTemplateContainerID_btnContinue\"]"));
+                webDriverModel.Input.Click();
+                Thread.Sleep(3000);
+
+                // ChromeInput Ward
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtWard\"]"));
+                webDriverModel.Input.Clear();
+                webDriverModel.Input.SendKeys(address.Ward);
+
+                // ChromeInput Section
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtSection\"]"));
+                webDriverModel.Input.Clear();
+                webDriverModel.Input.SendKeys(address.Section);
+
+                // ChromeInput Block
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtBlock\"]"));
+                webDriverModel.Input.Clear();
+                webDriverModel.Input.SendKeys(address.Block);
+
+                // ChromeInput Lot
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtLot\"]"));
+                webDriverModel.Input.Clear();
+                webDriverModel.Input.SendKeys(address.Lot);
+
+                // Click Next button
+                Thread.Sleep(200);
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton\"]"));
+                webDriverModel.Input.Click();
+                Thread.Sleep(3000);
+
+                // Click Ground Rent Registration link
+                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucDetailsSearch_dlstDetaisSearch_lnkGroundRentRegistration_0\"]"));
+                webDriverModel.Input.Click();
+                Thread.Sleep(1000);
+
+                // Condition: check if html has ground rent error tag (meaning property has no ground rent registered)
+                bool result;
+                if (webDriverModel.Driver.FindElements(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr\"]")).Count != 0)
                 {
-                    // Property is not ground rent
-                    address.IsGroundRent = false;
+                    if (webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr\"]"))
+                        .Text.Contains("There is currently no ground rent"))
+                    {
+                        // Property is not ground rent
+                        address.IsGroundRent = false;
+                        using (var uow = _dataContext.CreateUnitOfWork())
+                        {
+                            var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
+                            result = await addressDataService.CreateOrUpdateFromSDATIsGroundRent(new AddressModel
+                            {
+                                AccountId = address.AccountId,
+                                IsGroundRent = address.IsGroundRent
+                            });
+                            Console.WriteLine($"{address.AccountId.Trim()} is fee simple.");
+                        }
+                        if (result is false)
+                        {
+                            // Something wrong happened and I do not want the application to skip over this address
+                            webDriverModel.Driver.Quit();
+                            Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
+                        }
+                    }
+                }
+                else
+                {
+                    // Property must be ground rent
+                    address.IsGroundRent = true;
                     using (var uow = _dataContext.CreateUnitOfWork())
                     {
                         var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
@@ -96,60 +160,77 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
                             AccountId = address.AccountId,
                             IsGroundRent = address.IsGroundRent
                         });
+                        Console.WriteLine($"{address.AccountId.Trim()} is ground rent.");
                     }
-                    if (result is true)
-                    {
-                        // Go to previous page
-                        Thread.Sleep(300);
-                        input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_FinishNavigationTemplateContainerID_StepPreviousButton\"]"));
-                        input.Click();
-                        Thread.Sleep(3000);
-
-                        // Go to second previous page leading to Ward, Section, Block, and Lot input
-                        input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepPreviousButton\"]"));
-                        input.Click();
-                        Thread.Sleep(3000);
-                    }
-                    else if (result is false)
+                    if (result is false)
                     {
                         // Something wrong happened and I do not want the application to skip over this address
-                        WebDriver.Quit();
-                        Console.WriteLine($"Could not complete transaction for {address.AccountId}");
+                        webDriverModel.Driver.Quit();
+                        Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
                     }
                 }
-            }
-            // Property must be ground rent
-            address.IsGroundRent = true;
-            using (var uow = _dataContext.CreateUnitOfWork())
-            {
-                var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                result = await addressDataService.CreateOrUpdateFromSDATIsGroundRent(new AddressModel
-                {
-                    AccountId = address.AccountId,
-                    IsGroundRent = address.IsGroundRent
-                });
-            }
-            if (result is true)
-            {
-                // Go to previous page
-                Thread.Sleep(300);
-                input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_FinishNavigationTemplateContainerID_StepPreviousButton\"]"));
-                input.Click();
-                Thread.Sleep(3000);
-
-                // Go to second previous page leading to Ward, Section, Block, and Lot input
-                input = WebDriver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepPreviousButton\"]"));
-                input.Click();
-                Thread.Sleep(3000);
-            }
-            else if (result is false)
-            {
-                // Something wrong happened and I do not want the application to skip over this address
-                WebDriver.Quit();
-                Console.WriteLine($"Could not complete transaction for {address.AccountId}");
+                decimal percentComplete = Decimal.Divide(currentCount, totalCount);
+                Console.WriteLine($"{webDriverModel.Driver} has processed {percentComplete:P0} of addresses in list.");
             }
         }
-        // addressList has been iterated through
-        WebDriver.Quit();
+        catch (NoSuchElementException)
+        {
+
+            //IsConnected = false;
+            //if (AttemptReconnect())
+            //{
+            //    IsConnected = true;
+            //}
+        }
+        catch (StaleElementReferenceException)
+        {
+
+            //IsConnected = false;
+            //if (AttemptReconnect())
+            //{
+            //    IsConnected = true;
+            //}
+        }
+        catch (ArgumentNullException)
+        {
+
+            //IsConnected = false;
+            //if (AttemptReconnect())
+            //{
+            //    IsConnected = true;
+            //}
+        }
+        catch (WebDriverException)
+        {
+
+            //IsConnected = false;
+            //if (AttemptReconnect())
+            //{
+            //    IsConnected = true;
+            //}
+        }
+        //if (IsConnected)
+        //{
+        //    continue; // If the connection is re-established, continue the foreach loop
+        //}
+        finally
+        {
+            webDriverModel.Driver.Quit();
+        }
     }
+    //private bool AttemptReconnect()
+    //{
+    //    for (int i = 0; i < 3; i++) // Make 3 attempts to connect via Selenium scraper
+    //    {
+    //        Console.WriteLine($"Internet connectivity problem. Reconnecting attempt {i} of 3.");
+    //        Thread.Sleep(5000);
+    //        webDriverModel.Input.Click();
+    //        Thread.Sleep(2000);
+    //        if (_context.GetHttpContext().Connection != null)
+    //        {
+    //            return true;
+    //        }
+    //    }
+    //    return false;
+    //}
 }

@@ -62,9 +62,9 @@ public class AddressSqlDataService : IAddressDataService
         return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadByAccountId", new { AccountId = accountId },
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).FirstOrDefault();
     }
-    public async Task<List<AddressModel>> ReadAddressFirst10WhereIsGroundRentNull()
+    public async Task<List<AddressModel>> ReadAddressTopAmountWhereIsGroundRentNull()
     {
-        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadFirst10WhereIsGroundRentNull", null,
+        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadTop1000WhereIsGroundRentNull", null,
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
     }
     public async Task DeleteAddress(int accountId)
