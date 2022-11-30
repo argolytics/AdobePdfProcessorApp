@@ -31,12 +31,12 @@
         using (var uow = dataContext.CreateUnitOfWork())
         {
             var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            chromeAddressList = await addressDataService.ReadAddressTopAmountWhereIsGroundRentNull().ConfigureAwait(false);
+            chromeAddressList = await addressDataService.ReadAddressTopAmountWhereIsGroundRentNull();
         }
         using (var uow = dataContext.CreateUnitOfWork())
         {
             var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            edgeAddressList = await addressDataService.ReadAddressTopAmountWhereIsGroundRentNull().ConfigureAwait(false);
+            edgeAddressList = await addressDataService.ReadAddressNextAmountWhereIsGroundRentNull();
         }
         await scraper.AllocateWebDrivers(chromeAddressList, edgeAddressList);
         Console.WriteLine("Scrape complete.");

@@ -9,6 +9,7 @@ namespace DataLibrary.DbServices
         Task<bool> CreateOrUpdateFromSDATIsGroundRent(AddressModel addressModel);
         Task<AddressModel> ReadAddressByAccountId(int accountId);
         Task<List<AddressModel>> ReadAddressTopAmountWhereIsGroundRentNull();
+        Task<List<AddressModel>> ReadAddressNextAmountWhereIsGroundRentNull();
         Task DeleteAddress(int id);
     }
 }

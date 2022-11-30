@@ -40,7 +40,7 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
         EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
         EdgeDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
     }
-    public async Task AllocateWebDrivers(List<AddressModel> chromeAddressList, List<AddressModel> edgeAddressList)
+    public Task AllocateWebDrivers(List<AddressModel> chromeAddressList, List<AddressModel> edgeAddressList)
     {
         WebDriverModel chromeDriverModel = new WebDriverModel 
         { 
@@ -57,10 +57,7 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
         WebDriverList.Add(chromeDriverModel);
         WebDriverList.Add(edgeDriverModel);
 
-        foreach (var webDriverModel in WebDriverList)
-        {
-            await Scrape(webDriverModel);
-        }
+        return Task.WhenAll(WebDriverList.Select(webDriverModel => Scrape(webDriverModel)));
     }
     public async Task Scrape(WebDriverModel webDriverModel)
     {

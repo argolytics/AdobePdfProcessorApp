@@ -74,6 +74,7 @@
     <Build Include="dbo\Stored Procedures\spAddress_ReadTop10WhereIsGroundRentNull.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_ReadAllWhereIsGroundRentNull.sql" />
     <Build Include="dbo\Stored Procedures\spAddress_ReadTop10000WhereIsGroundRentNull.sql" />
+    <Build Include="dbo\Stored Procedures\spAddress_ReadNext1000WhereIsGroundRentNull.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GroundRentProcessorDb.publish.xml" />
