@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.SignalR;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
+using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.IE;
+using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
 
 namespace DataLibrary.Services;
 
@@ -15,11 +19,16 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
     private readonly HubConnectionContext _context;
     private WebDriver ChromeDriver { get; set; } = null;
     private WebDriver EdgeDriver { get; set; } = null;
+    private WebDriver FirefoxDriver { get; set; } = null;
+    private WebDriver IEDriver { get; set; } = null;
     private IWebElement ChromeInput { get; set; }
     private IWebElement EdgeInput { get; set; }
-    private List<WebDriverModel> WebDriverList { get; set; } = new();
-    private string ChromeDriverPath { get; set; } = @"C:\ChromeDriver\chromedriver.exe";
-    private string EdgeDriverPath { get; set; } = @"C:\EdgeDriver\msedgedriver.exe";
+    private IWebElement FirefoxInput { get; set; }
+    private IWebElement IEInput { get; set; }
+    private string ChromeDriverPath { get; set; } = @"C:\WebDrivers\chromedriver.exe";
+    private string EdgeDriverPath { get; set; } = @"C:\WebDrivers\msedgedriver.exe";
+    private string FirefoxDriverPath { get; set; } = @"C:\WebDrivers\geckodriver.exe";
+    private string IEDriverPath { get; set; } = @"C:\WebDrivers\IEWebDriver";
     private string BaseUrl { get; set; } = "https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx";
     private bool IsConnected { get; set; }
 
@@ -30,39 +39,70 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
         _dataContext = dataContext;
         _addressDataServiceFactory = addressDataServiceFactory;
 
-        var chromeOptions = new ChromeOptions();
-        chromeOptions.AddArguments("--headless");
-        ChromeDriver = new ChromeDriver(ChromeDriverPath, chromeOptions, TimeSpan.FromSeconds(30));
-        ChromeDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+        //var chromeOptions = new ChromeOptions();
+        //chromeOptions.AddArguments("--headless");
+        //ChromeDriver = new ChromeDriver(ChromeDriverPath, chromeOptions, TimeSpan.FromSeconds(30));
+        
+        //var edgeOptions = new EdgeOptions();
+        //edgeOptions.AddArguments("--headless");
+        //EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
 
-        var edgeOptions = new EdgeOptions();
-        edgeOptions.AddArguments("--headless");
-        EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
-        EdgeDriver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+        FirefoxProfile firefoxProfile = new(@"C:\WebDrivers\FirefoxProfile-DetaultUser");
+        FirefoxOptions firefoxOptions = new();
+        firefoxOptions.Profile = firefoxProfile;
+        firefoxOptions.AddArguments("--headless");
+        FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
+
+        //var ieOptions = new InternetExplorerOptions();
+        //ieOptions.IgnoreZoomLevel = true;
+        //IEDriver = new InternetExplorerDriver(IEDriverPath, ieOptions, TimeSpan.FromSeconds(30));
     }
-    public Task AllocateWebDrivers(List<AddressModel> chromeAddressList, List<AddressModel> edgeAddressList)
+    public void AllocateWebDrivers(
+        List<AddressModel> firefoxAddressList)
     {
-        WebDriverModel chromeDriverModel = new WebDriverModel 
-        { 
-            Driver = ChromeDriver,
-            Input = ChromeInput,
-            AddressList = chromeAddressList
-        };
-        WebDriverModel edgeDriverModel = new WebDriverModel
+        //WebDriverModel chromeDriverModel = new WebDriverModel 
+        //{ 
+        //    Driver = ChromeDriver,
+        //    Input = ChromeInput,
+        //    AddressList = chromeAddressList
+        //};
+        //WebDriverModel edgeDriverModel = new WebDriverModel
+        //{
+        //    Driver = EdgeDriver,
+        //    Input = EdgeInput,
+        //    AddressList = edgeAddressList
+        //};
+        WebDriverModel firefoxDriverModel = new WebDriverModel
         {
-            Driver = EdgeDriver,
-            Input = EdgeInput,
-            AddressList = edgeAddressList
+            Driver = FirefoxDriver,
+            Input = FirefoxInput,
+            AddressList = firefoxAddressList
         };
-        WebDriverList.Add(chromeDriverModel);
-        WebDriverList.Add(edgeDriverModel);
+        //WebDriverModel ieDriverModel = new WebDriverModel
+        //{
+        //    Driver = IEDriver,
+        //    Input = IEInput,
+        //    AddressList = ieAddressList
+        //};
 
-        return Task.WhenAll(WebDriverList.Select(webDriverModel => Scrape(webDriverModel)));
+        List<Task> tasks = new();
+        //tasks.Add(Task.Run(() => Scrape(chromeDriverModel)));
+        //tasks.Add(Task.Run(() => Scrape(edgeDriverModel)));
+        tasks.Add(Task.Run(() => Scrape(firefoxDriverModel)));
+        //tasks.Add(Task.Run(() => Scrape(ieDriverModel)));
+        Task.WaitAll(tasks.ToArray());
+
     }
     public async Task Scrape(WebDriverModel webDriverModel)
     {
         int currentCount;
         var totalCount = webDriverModel.AddressList.Count;
+        WebDriverWait webDriverWait = new(webDriverModel.Driver, TimeSpan.FromSeconds(30));
+        webDriverWait.IgnoreExceptionTypes(
+            typeof(NoSuchElementException),
+            typeof(StaleElementReferenceException),
+            typeof(ElementNotSelectableException),
+            typeof(ElementNotVisibleException));
 
         try
         {
@@ -70,59 +110,52 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
             foreach (var address in webDriverModel.AddressList)
             {
                 currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
-                Thread.Sleep(2000);
                 // Selecting "BALTIMORE CITY"
                 webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("/html/body/form/div[4]/div[4]/div/div/main/div[3]/div/div/table/tbody/tr[1]/td/div/div/fieldset/div[1]/div[2]/select/option[4]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlCounty > option:nth-child(4)")));
                 webDriverModel.Input.Click();
 
                 // Selecting "PROPERTY ACCOUNT IDENTIFIER"
-                Thread.Sleep(200);
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("/html/body/form/div[4]/div[4]/div/div/main/div[3]/div/div/table/tbody/tr[1]/td/div/div/fieldset/div[2]/div[2]/select/option[3]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlSearchType > option:nth-child(3)")));
                 webDriverModel.Input.Click();
 
                 // Click Continue button
-                Thread.Sleep(200);
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StartNavigationTemplateContainerID_btnContinue\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StartNavigationTemplateContainerID_btnContinue")));
                 webDriverModel.Input.Click();
-                Thread.Sleep(3000);
 
                 // ChromeInput Ward
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtWard\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtWard")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Ward);
 
                 // ChromeInput Section
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtSection\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtSection")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Section);
 
                 // ChromeInput Block
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtBlock\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtBlock")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Block);
 
                 // ChromeInput Lot
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtLot\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtLot")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Lot);
 
                 // Click Next button
-                Thread.Sleep(200);
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton")));
                 webDriverModel.Input.Click();
-                Thread.Sleep(3000);
 
                 // Click Ground Rent Registration link
-                webDriverModel.Input = webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucDetailsSearch_dlstDetaisSearch_lnkGroundRentRegistration_0\"]"));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucDetailsSearch_dlstDetaisSearch_lnkGroundRentRegistration_0")));
                 webDriverModel.Input.Click();
-                Thread.Sleep(1000);
 
                 // Condition: check if html has ground rent error tag (meaning property has no ground rent registered)
                 bool result;
-                if (webDriverModel.Driver.FindElements(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr\"]")).Count != 0)
+                if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Count != 0)
                 {
-                    if (webDriverModel.Driver.FindElement(By.XPath("//*[@id=\"cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr\"]"))
+                    if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr"))
                         .Text.Contains("There is currently no ground rent"))
                     {
                         // Property is not ground rent
@@ -143,6 +176,11 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
                             webDriverModel.Driver.Quit();
                             Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{webDriverModel.Driver} found {address.AccountId.Trim()} has a different error message than 'There is currently no ground rent' which is: {webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Text}. Quitting scrape.");
+                        webDriverModel.Driver.Quit();
                     }
                 }
                 else
@@ -170,64 +208,26 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
                 Console.WriteLine($"{webDriverModel.Driver} has processed {percentComplete:P0} of addresses in list.");
             }
         }
-        catch (NoSuchElementException)
+        catch (NoSuchElementException ex)
         {
-
-            //IsConnected = false;
-            //if (AttemptReconnect())
-            //{
-            //    IsConnected = true;
-            //}
+            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
+            Thread.Sleep(3000);
         }
-        catch (StaleElementReferenceException)
+        catch (StaleElementReferenceException ex)
         {
-
-            //IsConnected = false;
-            //if (AttemptReconnect())
-            //{
-            //    IsConnected = true;
-            //}
+            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
+            Thread.Sleep(3000);
         }
-        catch (ArgumentNullException)
+        catch (ArgumentNullException ex)
         {
-
-            //IsConnected = false;
-            //if (AttemptReconnect())
-            //{
-            //    IsConnected = true;
-            //}
+            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
+            Thread.Sleep(3000);
         }
-        catch (WebDriverException)
+        catch (WebDriverException ex)
         {
-
-            //IsConnected = false;
-            //if (AttemptReconnect())
-            //{
-            //    IsConnected = true;
-            //}
+            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
+            Thread.Sleep(3000);
         }
-        //if (IsConnected)
-        //{
-        //    continue; // If the connection is re-established, continue the foreach loop
-        //}
-        finally
-        {
-            webDriverModel.Driver.Quit();
-        }
+        webDriverModel.Driver.Quit();
     }
-    //private bool AttemptReconnect()
-    //{
-    //    for (int i = 0; i < 3; i++) // Make 3 attempts to connect via Selenium scraper
-    //    {
-    //        Console.WriteLine($"Internet connectivity problem. Reconnecting attempt {i} of 3.");
-    //        Thread.Sleep(5000);
-    //        webDriverModel.Input.Click();
-    //        Thread.Sleep(2000);
-    //        if (_context.GetHttpContext().Connection != null)
-    //        {
-    //            return true;
-    //        }
-    //    }
-    //    return false;
-    //}
 }

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[spAddress_CreateOrUpdateSpecPrintFile]
+﻿CREATE PROCEDURE [dbo].[spGroundRentBaltimoreCity_CreateOrUpdateSpecPrintFile]
 	@AccountId NVARCHAR(16),
 	@Ward  NCHAR (2),
     @Section  NCHAR (2),
@@ -10,10 +10,10 @@ AS
 SET NOCOUNT ON;
 	
 BEGIN
-	IF EXISTS (SELECT [AccountId] FROM dbo.[Address] 
+	IF EXISTS (SELECT [AccountId] FROM dbo.[GroundRentBaltimoreCity] 
 	WHERE [AccountId] = @AccountId)
 BEGIN
-	UPDATE dbo.[Address] SET
+	UPDATE dbo.[GroundRentBaltimoreCity] SET
 	[AccountId] = @AccountId,
 	[Ward] = @Ward,
     [Section] = @Section,
@@ -25,7 +25,7 @@ BEGIN
 END
 ELSE
 BEGIN
-	INSERT INTO dbo.[Address](
+	INSERT INTO dbo.[GroundRentBaltimoreCity](
 	[AccountId],
 	[Ward],
     [Section],

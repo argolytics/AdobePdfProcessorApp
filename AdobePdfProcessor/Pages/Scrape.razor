@@ -28,17 +28,19 @@
     {
         List<AddressModel> chromeAddressList;
         List<AddressModel> edgeAddressList;
+        List<AddressModel> firefoxAddressList;
+        List<AddressModel> ieAddressList;
         using (var uow = dataContext.CreateUnitOfWork())
         {
             var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            chromeAddressList = await addressDataService.ReadAddressTopAmountWhereIsGroundRentNull();
+            firefoxAddressList = await addressDataService.ReadGroundRentJasonTopAmountWhereIsGroundRentNull();
         }
-        using (var uow = dataContext.CreateUnitOfWork())
-        {
-            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            edgeAddressList = await addressDataService.ReadAddressNextAmountWhereIsGroundRentNull();
-        }
-        await scraper.AllocateWebDrivers(chromeAddressList, edgeAddressList);
+        //using (var uow = dataContext.CreateUnitOfWork())
+        //{
+        //    var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+        //    firefoxAddressList = await addressDataService.ReadGroundRentAmandaTopAmountWhereIsGroundRentNull();
+        //}
+        scraper.AllocateWebDrivers(firefoxAddressList);
         Console.WriteLine("Scrape complete.");
     }
     private void CloseApp()

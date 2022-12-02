@@ -1,5 +1,6 @@
-﻿CREATE TABLE [dbo].[Address] (
-    [AccountId]  NCHAR (16) NULL,
+﻿CREATE TABLE [dbo].[BackUpAddressTable]
+(
+	[AccountId]  NCHAR (16) NULL,
     [Ward]  NCHAR (2) NULL,
     [Section]  NCHAR (2) NULL,
     [Block]  NCHAR (5) NULL,
@@ -18,5 +19,4 @@
     [PaymentDateQuarterly2] SMALLDATETIME NULL,
     [PaymentDateQuarterly3] SMALLDATETIME NULL,
     [PaymentDateQuarterly4] SMALLDATETIME NULL
-);
-
+)

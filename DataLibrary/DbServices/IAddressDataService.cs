@@ -8,8 +8,8 @@ namespace DataLibrary.DbServices
         Task CreateOrUpdateFromSDATRedeemedFile(AddressModel addressModel);
         Task<bool> CreateOrUpdateFromSDATIsGroundRent(AddressModel addressModel);
         Task<AddressModel> ReadAddressByAccountId(int accountId);
-        Task<List<AddressModel>> ReadAddressTopAmountWhereIsGroundRentNull();
-        Task<List<AddressModel>> ReadAddressNextAmountWhereIsGroundRentNull();
+        Task<List<AddressModel>> ReadGroundRentJasonTopAmountWhereIsGroundRentNull();
+        Task<List<AddressModel>> ReadGroundRentAmandaTopAmountWhereIsGroundRentNull();
         Task DeleteAddress(int id);
     }
 }
