@@ -38,7 +38,7 @@ public class AddressSqlDataService : IAddressDataService
         await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATRedeemedFile", parms,
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
     }
-    public async Task<bool> CreateOrUpdateFromSDATIsGroundRent(AddressModel addressModel)
+    public async Task<bool> CreateOrUpdateGroundRentJasonFromSDATIsGroundRent(AddressModel addressModel)
     {
         try
         {
@@ -47,7 +47,26 @@ public class AddressSqlDataService : IAddressDataService
                 addressModel.AccountId,
                 addressModel.IsGroundRent
             };
-            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATIsGroundRent", parms,
+            await _unitOfWork.Connection.ExecuteAsync("spGroundRentBaltimoreCity_CreateOrUpdateSDATIsGroundRent", parms,
+                commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return false;
+        }
+    }
+    public async Task<bool> CreateOrUpdateGroundRentAmandaFromSDATIsGroundRent(AddressModel addressModel)
+    {
+        try
+        {
+            var parms = new
+            {
+                addressModel.AccountId,
+                addressModel.IsGroundRent
+            };
+            await _unitOfWork.Connection.ExecuteAsync("spGroundRentBaltimoreCityAmanda_CreateOrUpdateSDATIsGroundRent", parms,
                 commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
             return true;
         }

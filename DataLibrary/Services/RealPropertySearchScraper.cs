@@ -163,11 +163,17 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
                             var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.CreateOrUpdateFromSDATIsGroundRent(new AddressModel
+                            result = await addressDataService.CreateOrUpdateGroundRentJasonFromSDATIsGroundRent(new AddressModel
                             {
                                 AccountId = address.AccountId,
                                 IsGroundRent = address.IsGroundRent
                             });
+                            //var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
+                            //result = await addressDataService.CreateOrUpdateGroundRentAmandaFromSDATIsGroundRent(new AddressModel
+                            //{
+                            //    AccountId = address.AccountId,
+                            //    IsGroundRent = address.IsGroundRent
+                            //});
                             Console.WriteLine($"{address.AccountId.Trim()} is fee simple.");
                         }
                         if (result is false)
