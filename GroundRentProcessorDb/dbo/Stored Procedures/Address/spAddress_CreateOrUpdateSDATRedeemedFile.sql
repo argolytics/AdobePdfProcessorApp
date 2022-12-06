@@ -1,21 +1,21 @@
-﻿CREATE PROCEDURE [dbo].[spGroundRentBaltimoreCity_CreateOrUpdateSDATRedeemedFile]
-	@AccountId NVARCHAR(16),
+﻿CREATE PROCEDURE [dbo].[spAddress_CreateOrUpdateSDATRedeemedFile]
+	@AccountId NCHAR(16),
     @IsRedeemed BIT
 AS
 SET NOCOUNT ON;
 	
 BEGIN
-	IF EXISTS (SELECT [AccountId] FROM dbo.[GroundRentBaltimoreCity] 
+	IF EXISTS (SELECT [AccountId] FROM dbo.[Address] 
 	WHERE [AccountId] = @AccountId)
 BEGIN
-	UPDATE dbo.[GroundRentBaltimoreCity] SET
+	UPDATE dbo.[Address] SET
 	[AccountId] = @AccountId,
     [IsRedeemed] = @IsRedeemed
 	WHERE [AccountId] = @AccountId
 END
 ELSE
 BEGIN
-	INSERT INTO dbo.[GroundRentBaltimoreCity](
+	INSERT INTO dbo.[Address](
 	[AccountId],
     [IsRedeemed])
 

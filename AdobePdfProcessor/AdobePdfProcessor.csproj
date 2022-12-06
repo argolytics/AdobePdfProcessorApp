@@ -10,8 +10,8 @@
 	    <ProjectReference Include="..\DataLibrary\DataLibrary.csproj" />
     </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\data\zipData\" />
-  </ItemGroup>
+    <ItemGroup>
+      <Folder Include="wwwroot\data\zipData\" />
+    </ItemGroup>
 
 </Project>

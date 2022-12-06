@@ -1,6 +1,7 @@
-﻿CREATE TABLE [dbo].[GroundRentBaltimoreCity] (
-    [AccountId]  NCHAR (16) NULL,
-    [AccountNumber] NCHAR (16) NULL,
+﻿CREATE TABLE [dbo].[GroundRentBaltimoreCounty]
+(
+	[AccountId]  NCHAR (20) NULL,
+    [AccountNumber] NCHAR (20) NULL,
     [Ward]  NCHAR (2) NULL,
     [Section]  NCHAR (2) NULL,
     [Block]  NCHAR (5) NULL,
@@ -21,5 +22,4 @@
     [PaymentDateQuarterly3] SMALLDATETIME NULL,
     [PaymentDateQuarterly4] SMALLDATETIME NULL,
     [PaymentDateOther] SMALLDATETIME NULL
-);
-
+)

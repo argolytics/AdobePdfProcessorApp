@@ -1,7 +1,7 @@
 ﻿using DataLibrary.DbServices;
 using DataLibrary.Models;
 
-namespace DataLibrary.Services;
+namespace DataLibrary.Services.SDATScrapers;
 
 public interface IRealPropertySearchScraper
 {

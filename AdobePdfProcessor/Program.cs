@@ -2,11 +2,11 @@ using DataLibrary.DbAccess;
 using DataLibrary.DbServices;
 using DataLibrary.Helpers;
 using DataLibrary.HttpClients;
-using DataLibrary.Services;
 using DataLibrary.Settings;
 using System.Net.Http.Headers;
 using Serilog;
-using Microsoft.AspNetCore.SignalR;
+using OpenQA.Selenium.Support.UI;
+using DataLibrary.Services.SDATScrapers;
 
 namespace GroundRentProcessor;
 
@@ -33,7 +33,7 @@ public class Program
             builder.Services.AddServerSideBlazor();
             builder.Services.AddScoped<IDataContext>(s => new DataContext(configuration.GetConnectionString("Default")));
             builder.Services.AddScoped<IAddressDataServiceFactory, AddressDataServiceFactory>();
-            builder.Services.AddScoped<IRealPropertySearchScraper, RealPropertySearchScraper>();
+            builder.Services.AddScoped<IRealPropertySearchScraper, BaltimoreCityScraper>();
             builder.Services.AddScoped<AccessTokenInformation>();
             var pdfSettings = new PDFServicesSettings();
             configuration.GetSection("PDFServices").Bind(pdfSettings);

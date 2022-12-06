@@ -1,2 +1,2 @@
-﻿DELETE FROM GroundRentBaltimoreCity WHERE AccountId NOT IN 
-(SELECT TOP 60000 AccountId FROM GroundRentBaltimoreCity ORDER BY AccountId)
+﻿DELETE FROM BaltimoreCity2 WHERE AccountId NOT IN 
+(SELECT TOP 14000 AccountId FROM BaltimoreCity2 ORDER BY AccountId)

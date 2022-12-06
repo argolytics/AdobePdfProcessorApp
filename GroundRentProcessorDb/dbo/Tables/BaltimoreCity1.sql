@@ -1,5 +1,6 @@
-﻿CREATE TABLE [dbo].[GroundRentBaltimoreCity] (
-    [AccountId]  NCHAR (16) NULL,
+﻿CREATE TABLE [dbo].[BaltimoreCity1]
+(
+	[AccountId]  NCHAR (16) NULL,
     [AccountNumber] NCHAR (16) NULL,
     [Ward]  NCHAR (2) NULL,
     [Section]  NCHAR (2) NULL,
@@ -21,5 +22,4 @@
     [PaymentDateQuarterly3] SMALLDATETIME NULL,
     [PaymentDateQuarterly4] SMALLDATETIME NULL,
     [PaymentDateOther] SMALLDATETIME NULL
-);
-
+)

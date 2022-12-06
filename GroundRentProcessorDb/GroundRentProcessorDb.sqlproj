@@ -61,23 +61,28 @@
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Stored Procedures\" />
-    <Folder Include="dbo\Stored Procedures\BaltimoreCityJason" />
-    <Folder Include="dbo\Stored Procedures\BaltimoreCityAmanda" />
+    <Folder Include="dbo\Stored Procedures\Address" />
+    <Folder Include="dbo\Stored Procedures\BaltimoreCounty" />
+    <Folder Include="dbo\Stored Procedures\BaltimoreCity" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\GroundRentBaltimoreCity.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_CreateOrUpdateSDATIsGroundRent.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_CreateOrUpdateSDATRedeemedFile.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_CreateOrUpdateSpecPrintFile.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_Delete.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_ReadAllWhereIsGroundRentNull.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_ReadByAccountId.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_ReadNext10000WhereIsGroundRentNull.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityJason\spGroundRentBaltimoreCity_ReadTop60000WhereIsGroundRentNull.sql" />
-    <Build Include="dbo\Tables\GroundRentBaltimoreCityAmanda.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityAmanda\spGroundRentBaltimoreCityAmanda_CreateOrUpdateSDATIsGroundRent.sql" />
-    <Build Include="dbo\Stored Procedures\BaltimoreCityAmanda\spGroundRentBaltimoreCityAmanda_ReadTop60000WhereIsGroundRentNull.sql" />
-    <Build Include="dbo\Tables\BackUpAddressTable.sql" />
+    <Build Include="dbo\Stored Procedures\Address\spAddress_CreateOrUpdateIsGroundRent.sql" />
+    <Build Include="dbo\Stored Procedures\Address\spAddress_CreateOrUpdateSDATRedeemedFile.sql" />
+    <Build Include="dbo\Stored Procedures\Address\spAddress_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\Address\spAddress_ReadTopAmountWhereIsGroundRentNull.sql" />
+    <Build Include="dbo\Tables\Address.sql" />
+    <Build Include="dbo\Tables\GroundRentBaltimoreCounty.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCounty\spAddress_CreateOrUpdateSpecPrintFileForBaltimoreCounty.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spAddress_CreateOrUpdateSpecPrintFileForBaltimoreCity.sql" />
+    <Build Include="dbo\Tables\BaltimoreCity1.sql" />
+    <Build Include="dbo\Tables\BaltimoreCity2.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spAddress_ReadTopAmountWhereIsGroundRentNullAndYearBuiltIsZeroBaltimoreCity1.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spAddress_ReadTopAmountWhereIsGroundRentNullAndYearBuiltIsZeroBaltimoreCity2.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spBaltimoreCity1_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spBaltimoreCity2_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spAddress_CreateOrUpdateIsGroundRentBaltimoreCity1.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spAddress_CreateOrUpdateIsGroundRentBaltimoreCity2.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GroundRentProcessorDb.publish.xml" />

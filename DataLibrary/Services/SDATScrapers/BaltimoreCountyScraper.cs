@@ -10,13 +10,12 @@ using OpenQA.Selenium.IE;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 
-namespace DataLibrary.Services;
+namespace DataLibrary.Services.SDATScrapers;
 
-public class RealPropertySearchScraper : IRealPropertySearchScraper
+public class BaltimoreCountyScraper : IRealPropertySearchScraper
 {
     private readonly IDataContext _dataContext;
     private readonly IAddressDataServiceFactory _addressDataServiceFactory;
-    private readonly HubConnectionContext _context;
     private WebDriver ChromeDriver { get; set; } = null;
     private WebDriver EdgeDriver { get; set; } = null;
     private WebDriver FirefoxDriver { get; set; } = null;
@@ -32,7 +31,7 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
     private string BaseUrl { get; set; } = "https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx";
     private bool IsConnected { get; set; }
 
-    public RealPropertySearchScraper(
+    public BaltimoreCountyScraper(
         IDataContext dataContext,
         IAddressDataServiceFactory addressDataServiceFactory)
     {
@@ -42,7 +41,7 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
         //var chromeOptions = new ChromeOptions();
         //chromeOptions.AddArguments("--headless");
         //ChromeDriver = new ChromeDriver(ChromeDriverPath, chromeOptions, TimeSpan.FromSeconds(30));
-        
+
         //var edgeOptions = new EdgeOptions();
         //edgeOptions.AddArguments("--headless");
         //EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
@@ -97,7 +96,10 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
     {
         int currentCount;
         var totalCount = webDriverModel.AddressList.Count;
-        WebDriverWait webDriverWait = new(webDriverModel.Driver, TimeSpan.FromSeconds(30));
+        bool result;
+        bool checkingIfAddressExists = true;
+
+        WebDriverWait webDriverWait = new(webDriverModel.Driver, TimeSpan.FromSeconds(10));
         webDriverWait.IgnoreExceptionTypes(
             typeof(NoSuchElementException),
             typeof(StaleElementReferenceException),
@@ -110,7 +112,7 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
             foreach (var address in webDriverModel.AddressList)
             {
                 currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
-                // Selecting "BALTIMORE CITY"
+                // Selecting "BALTIMORE COUNTY"
                 webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlCounty > option:nth-child(4)")));
                 webDriverModel.Input.Click();
@@ -123,58 +125,89 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StartNavigationTemplateContainerID_btnContinue")));
                 webDriverModel.Input.Click();
 
-                // ChromeInput Ward
-                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtWard")));
+                // ChromeInput District
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtDistrict")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Ward);
 
-                // ChromeInput Section
-                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtSection")));
+                // ChromeInput AccountId
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtAccountIdentifier")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Section);
-
-                // ChromeInput Block
-                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtBlock")));
-                webDriverModel.Input.Clear();
-                webDriverModel.Input.SendKeys(address.Block);
-
-                // ChromeInput Lot
-                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtLot")));
-                webDriverModel.Input.Clear();
-                webDriverModel.Input.SendKeys(address.Lot);
 
                 // Click Next button
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton")));
                 webDriverModel.Input.Click();
-
-                // Click Ground Rent Registration link
-                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucDetailsSearch_dlstDetaisSearch_lnkGroundRentRegistration_0")));
-                webDriverModel.Input.Click();
-
-                // Condition: check if html has ground rent error tag (meaning property has no ground rent registered)
-                bool result;
-                if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Count != 0)
+                if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr")).Count != 0)
                 {
-                    if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr"))
-                        .Text.Contains("There is currently no ground rent"))
+                    if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr"))
+                        .Text.Contains("There are no records that match your criteria"))
                     {
-                        // Property is not ground rent
-                        address.IsGroundRent = false;
+                        // Address does not exist in SDAT
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
                             var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.CreateOrUpdateGroundRentJasonFromSDATIsGroundRent(new AddressModel
+                            result = await addressDataService.DeleteAddress(address.AccountId);
+                            Console.WriteLine($"{address.AccountId.Trim()} does not exist and was deleted.");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{webDriverModel.Driver} found {address.AccountId.Trim()} does not exist and tried to delete, but the error message text is different than usual: {webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Text}. Quitting scrape.");
+                        webDriverModel.Driver.Quit();
+                    }
+                }
+                else
+                {
+                    // Click Ground Rent Registration link
+                    webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucDetailsSearch_dlstDetaisSearch_lnkGroundRentRegistration_0")));
+                    webDriverModel.Input.Click();
+
+                    // Condition: check if html has ground rent error tag (meaning property has no ground rent registered)
+
+                    if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Count != 0)
+                    {
+                        if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr"))
+                            .Text.Contains("There is currently no ground rent"))
+                        {
+                            // Property is not ground rent
+                            address.IsGroundRent = false;
+                            using (var uow = _dataContext.CreateUnitOfWork())
+                            {
+                                var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
+                                result = await addressDataService.CreateOrUpdateIsGroundRent(new AddressModel
+                                {
+                                    AccountId = address.AccountId,
+                                    IsGroundRent = address.IsGroundRent
+                                });
+                                Console.WriteLine($"{address.AccountId.Trim()} is fee simple.");
+                            }
+                            if (result is false)
+                            {
+                                // Something wrong happened and I do not want the application to skip over this address
+                                webDriverModel.Driver.Quit();
+                                Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{webDriverModel.Driver} found {address.AccountId.Trim()} has a different error message than 'There is currently no ground rent' which is: {webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Text}. Quitting scrape.");
+                            webDriverModel.Driver.Quit();
+                        }
+                    }
+                    else
+                    {
+                        // Property must be ground rent
+                        address.IsGroundRent = true;
+                        using (var uow = _dataContext.CreateUnitOfWork())
+                        {
+                            var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
+                            result = await addressDataService.CreateOrUpdateIsGroundRent(new AddressModel
                             {
                                 AccountId = address.AccountId,
                                 IsGroundRent = address.IsGroundRent
                             });
-                            //var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            //result = await addressDataService.CreateOrUpdateGroundRentAmandaFromSDATIsGroundRent(new AddressModel
-                            //{
-                            //    AccountId = address.AccountId,
-                            //    IsGroundRent = address.IsGroundRent
-                            //});
-                            Console.WriteLine($"{address.AccountId.Trim()} is fee simple.");
+                            Console.WriteLine($"{address.AccountId.Trim()} is ground rent.");
                         }
                         if (result is false)
                         {
@@ -183,41 +216,9 @@ public class RealPropertySearchScraper : IRealPropertySearchScraper
                             Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
                         }
                     }
-                    else
-                    {
-                        Console.WriteLine($"{webDriverModel.Driver} found {address.AccountId.Trim()} has a different error message than 'There is currently no ground rent' which is: {webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Text}. Quitting scrape.");
-                        webDriverModel.Driver.Quit();
-                    }
+                    decimal percentComplete = decimal.Divide(currentCount, totalCount);
+                    Console.WriteLine($"{webDriverModel.Driver} has processed {percentComplete:P0} of addresses in list.");
                 }
-                else
-                {
-                    // Property must be ground rent
-                    address.IsGroundRent = true;
-                    using (var uow = _dataContext.CreateUnitOfWork())
-                    {
-                        var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                        result = await addressDataService.CreateOrUpdateGroundRentJasonFromSDATIsGroundRent(new AddressModel
-                        {
-                            AccountId = address.AccountId,
-                            IsGroundRent = address.IsGroundRent
-                        });
-                        //var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                        //result = await addressDataService.CreateOrUpdateGroundRentAmandaFromSDATIsGroundRent(new AddressModel
-                        //{
-                        //    AccountId = address.AccountId,
-                        //    IsGroundRent = address.IsGroundRent
-                        //});
-                        Console.WriteLine($"{address.AccountId.Trim()} is ground rent.");
-                    }
-                    if (result is false)
-                    {
-                        // Something wrong happened and I do not want the application to skip over this address
-                        webDriverModel.Driver.Quit();
-                        Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
-                    }
-                }
-                decimal percentComplete = Decimal.Divide(currentCount, totalCount);
-                Console.WriteLine($"{webDriverModel.Driver} has processed {percentComplete:P0} of addresses in list.");
             }
         }
         catch (NoSuchElementException ex)

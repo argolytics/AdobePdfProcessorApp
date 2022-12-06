@@ -1,6 +1,8 @@
 ﻿@page "/extract"
 @using System.IO
 @using CsvHelper
+@using CsvHelper.Configuration
+@using CsvHelper.TypeConversion
 @using DataLibrary.DbAccess
 @using DataLibrary.DbServices
 @using DataLibrary.Helpers
@@ -11,12 +13,12 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.IO.Compression;
+@using DataLibrary.Services.SDATScrapers;
 @inject GetUploadUri getUploadUri
 @inject UploadPdf uploadPdf
 @inject ExtractPdf extractPdf
 @inject GetDownloadStatus getDownloadStatus
 @inject DownloadPdf downloadPdf
-@inject IRealPropertySearchScraper scraper
 @inject IDataContext dataContext
 @inject IAddressDataServiceFactory addressDataServiceFactory
 
@@ -26,7 +28,8 @@
             <InputFile OnChange="OnInputFileChange" multiple></InputFile>
             <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
             <button class="btn btn-secondary" type="submit" @onclick="ProcessAdobePDF">ProcessAdobePDF</button>
-            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFile">ProcessSpecPrintFile</button>
+            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFileForBaltimoreCity">ProcessBaltimoreCity</button>
+            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFileForBaltimoreCounty">ProcessBaltimoreCounty</button>
         </div>
         @if(selectedFiles is not null)
         {
@@ -48,6 +51,7 @@
     private List<FileModel> files = new();
     private string Message = "No file(s) selected";
     private long maxAllowedBufferSize = 1024 * 1024 * 200;
+    private long mdOpenDatasetCsvFileMaxBufferSize = 5L * 1024L * 1024L * 1024L;
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -69,7 +73,7 @@
     {
         foreach (var file in files)
         {
-            Stream stream = file.File.OpenReadStream(maxAllowedBufferSize);
+            Stream stream = file.File.OpenReadStream(mdOpenDatasetCsvFileMaxBufferSize);
             file.UploadPath = Directory.GetCurrentDirectory() + @"\wwwroot\data\" + "uploadId_" + Guid.NewGuid().ToString() + "_" + file.File.Name;
             FileStream fileStream = File.Create(file.UploadPath);
             await stream.CopyToAsync(fileStream);
@@ -77,6 +81,7 @@
             fileStream.Dispose();
             stream.Close();
             stream.Dispose();
+            Console.WriteLine($"{file.File.Name} upload complete.");
         }
         Message = $"{files.Count} file(s) uploaded on server";
         this.StateHasChanged();
@@ -162,7 +167,7 @@
             tableDirectory.Delete(true);
         }
     }
-    private async void ProcessSpecPrintFile()
+    private async void ProcessSpecPrintFileForBaltimoreCity()
     {
         foreach (var file in files)
         {
@@ -180,7 +185,8 @@
                             var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
                             var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
 
-                            if(landUseCode == "E" && yearBuiltInt <= 2014 && yearBuiltInt > 0)
+                            if (yearBuiltInt <= 2014 &&
+                                (landUseCode == "E" || landUseCode == "R"))
                             {
                                 var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
                                 var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
@@ -189,7 +195,7 @@
                                 var lot = csvReader.Parser.RawRecord.Substring(398, 4).Replace(" ", "");
 
                                 var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                                await addressDataService.CreateOrUpdateFromSpecPrintFile(
+                                await addressDataService.CreateOrUpdateFromSpecPrintFileForBaltimoreCity(
                                 new AddressModel()
                                     {
                                         AccountId = accountId,
@@ -210,6 +216,55 @@
                 }
             }
             File.Delete(file.UploadPath);
+            Console.WriteLine("Processing complete.");
+        }
+    }
+    private async void ProcessSpecPrintFileForBaltimoreCounty()
+    {
+        foreach (var file in files)
+        {
+            using (var streamReader = new StreamReader(file.UploadPath))
+            {
+                using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+                {
+                    csvReader.Read();
+
+                    while (csvReader.Read())
+                    {
+                        using (var uow = dataContext.CreateUnitOfWork())
+                        {
+                            var landUseCode = csvReader.Parser.RawRecord.Substring(428, 1);
+                            var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
+                            var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
+
+                            if (yearBuiltInt <= 2014 &&
+                                (landUseCode == "E" || landUseCode == "R"))
+                    {
+                                var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
+                                var accountNumber = csvReader.Parser.RawRecord.Substring(0, 0).Replace(" ", "");
+                                var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
+
+                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+                                await addressDataService.CreateOrUpdateFromSpecPrintFileForBaltimoreCounty(
+                                new AddressModel()
+                                    {
+                                        AccountId = accountId,
+                                        AccountNumber = accountNumber,
+                                        Ward = ward,
+                                        LandUseCode = landUseCode,
+                                        YearBuilt = yearBuiltInt
+                                    });
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            File.Delete(file.UploadPath);
+            Console.WriteLine("Processing complete.");
         }
     }
 }
