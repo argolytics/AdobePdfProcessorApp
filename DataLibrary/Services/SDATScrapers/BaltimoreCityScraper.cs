@@ -110,6 +110,10 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
             Console.WriteLine($"{webDriverModel.Driver} begin...");
             foreach (var address in webDriverModel.AddressList)
             {
+                var section = address.Section.Replace(" ", "");
+                var block = address.Block.Replace(" ", "");
+                var lot = address.Lot.Replace(" ", "");
+
                 currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
                 // Selecting "BALTIMORE CITY"
                 webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
@@ -132,21 +136,33 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                 // ChromeInput Section
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtSection")));
                 webDriverModel.Input.Clear();
-                webDriverModel.Input.SendKeys(address.Section);
+                webDriverModel.Input.SendKeys(section);
 
                 // ChromeInput Block
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtBlock")));
                 webDriverModel.Input.Clear();
-                webDriverModel.Input.SendKeys(address.Block);
+                webDriverModel.Input.SendKeys(block);
 
                 // ChromeInput Lot
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtLot")));
                 webDriverModel.Input.Clear();
-                webDriverModel.Input.SendKeys(address.Lot);
+                webDriverModel.Input.SendKeys(lot);
 
                 // Click Next button
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton")));
                 webDriverModel.Input.Click();
+                if (string.IsNullOrEmpty(section)
+                    && string.IsNullOrEmpty(block)
+                    && string.IsNullOrEmpty(lot))
+                {
+                    // Address does not have section, block, and lot
+                    using (var uow = _dataContext.CreateUnitOfWork())
+                    {
+                        var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
+                        result = await addressDataService.DeleteBaltimoreCity1(address.AccountId);
+                        Console.WriteLine($"{address.AccountId.Trim()} does not have a section, block, and lot so it was deleted.");
+                    }
+                }
                 if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr")).Count != 0)
                 {
                     if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr"))
