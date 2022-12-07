@@ -15,20 +15,10 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
 {
     private readonly IDataContext _dataContext;
     private readonly IAddressDataServiceFactory _addressDataServiceFactory;
-    private WebDriver ChromeDriver { get; set; } = null;
-    private WebDriver EdgeDriver { get; set; } = null;
     private WebDriver FirefoxDriver { get; set; } = null;
-    private WebDriver IEDriver { get; set; } = null;
-    private IWebElement ChromeInput { get; set; }
-    private IWebElement EdgeInput { get; set; }
     private IWebElement FirefoxInput { get; set; }
-    private IWebElement IEInput { get; set; }
-    private string ChromeDriverPath { get; set; } = @"C:\WebDrivers\chromedriver.exe";
-    private string EdgeDriverPath { get; set; } = @"C:\WebDrivers\msedgedriver.exe";
     private string FirefoxDriverPath { get; set; } = @"C:\WebDrivers\geckodriver.exe";
-    private string IEDriverPath { get; set; } = @"C:\WebDrivers\IEWebDriver";
     private string BaseUrl { get; set; } = "https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx";
-    private bool IsConnected { get; set; }
 
     public BaltimoreCityScraper(
         IDataContext dataContext,
@@ -37,57 +27,32 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
         _dataContext = dataContext;
         _addressDataServiceFactory = addressDataServiceFactory;
 
-        //var chromeOptions = new ChromeOptions();
-        //chromeOptions.AddArguments("--headless");
-        //ChromeDriver = new ChromeDriver(ChromeDriverPath, chromeOptions, TimeSpan.FromSeconds(30));
-
-        //var edgeOptions = new EdgeOptions();
-        //edgeOptions.AddArguments("--headless");
-        //EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
+        // For Amanda's laptop
+        //FirefoxProfile firefoxProfile = new(@"C:\Users\Jason Argo\AppData\Local\Mozilla\Firefox\Profiles\4x0ows5f.default-release-1670017618762");
+        //FirefoxOptions firefoxOptions = new();
+        //firefoxOptions.Profile = firefoxProfile;
+        //firefoxOptions.AddArguments("--headless");
+        //firefoxOptions.AddArguments("--binary C:\\Program Files\\Mozilla Firefox\\firefox.exe");
+        //FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
 
         FirefoxProfile firefoxProfile = new(@"C:\WebDrivers\FirefoxProfile-DetaultUser");
         FirefoxOptions firefoxOptions = new();
         firefoxOptions.Profile = firefoxProfile;
         firefoxOptions.AddArguments("--headless");
         FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
-
-        //var ieOptions = new InternetExplorerOptions();
-        //ieOptions.IgnoreZoomLevel = true;
-        //IEDriver = new InternetExplorerDriver(IEDriverPath, ieOptions, TimeSpan.FromSeconds(30));
     }
     public void AllocateWebDrivers(
         List<AddressModel> firefoxAddressList)
     {
-        //WebDriverModel chromeDriverModel = new WebDriverModel 
-        //{ 
-        //    Driver = ChromeDriver,
-        //    Input = ChromeInput,
-        //    AddressList = chromeAddressList
-        //};
-        //WebDriverModel edgeDriverModel = new WebDriverModel
-        //{
-        //    Driver = EdgeDriver,
-        //    Input = EdgeInput,
-        //    AddressList = edgeAddressList
-        //};
         WebDriverModel firefoxDriverModel = new WebDriverModel
         {
             Driver = FirefoxDriver,
             Input = FirefoxInput,
             AddressList = firefoxAddressList
         };
-        //WebDriverModel ieDriverModel = new WebDriverModel
-        //{
-        //    Driver = IEDriver,
-        //    Input = IEInput,
-        //    AddressList = ieAddressList
-        //};
 
         List<Task> tasks = new();
-        //tasks.Add(Task.Run(() => Scrape(chromeDriverModel)));
-        //tasks.Add(Task.Run(() => Scrape(edgeDriverModel)));
         tasks.Add(Task.Run(() => Scrape(firefoxDriverModel)));
-        //tasks.Add(Task.Run(() => Scrape(ieDriverModel)));
         Task.WaitAll(tasks.ToArray());
 
     }
@@ -163,7 +128,7 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                         Console.WriteLine($"{address.AccountId.Trim()} does not have a section, block, and lot so it was deleted.");
                     }
                 }
-                if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr")).Count != 0)
+                else if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr")).Count != 0)
                 {
                     if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_lblErr"))
                         .Text.Contains("There are no records that match your criteria"))
