@@ -211,7 +211,7 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
                             var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.CreateOrUpdateIsGroundRentBaltimoreCity2(new AddressModel
+                            result = await addressDataService.CreateOrUpdateIsGroundRentBaltimoreCity1(new AddressModel
                             {
                                 AccountId = address.AccountId,
                                 IsGroundRent = address.IsGroundRent
