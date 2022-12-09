@@ -1,12 +1,8 @@
 ﻿using DataLibrary.DbAccess;
 using DataLibrary.DbServices;
 using DataLibrary.Models;
-using Microsoft.AspNetCore.SignalR;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
-using OpenQA.Selenium.IE;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 
@@ -15,80 +11,45 @@ namespace DataLibrary.Services.SDATScrapers;
 public class BaltimoreCountyScraper : IRealPropertySearchScraper
 {
     private readonly IDataContext _dataContext;
-    private readonly IAddressDataServiceFactory _addressDataServiceFactory;
-    private WebDriver ChromeDriver { get; set; } = null;
-    private WebDriver EdgeDriver { get; set; } = null;
+    private readonly IGroundRentProcessorDataServiceFactory _groundRentProcessorDataServiceFactory;
     private WebDriver FirefoxDriver { get; set; } = null;
-    private WebDriver IEDriver { get; set; } = null;
-    private IWebElement ChromeInput { get; set; }
-    private IWebElement EdgeInput { get; set; }
     private IWebElement FirefoxInput { get; set; }
-    private IWebElement IEInput { get; set; }
-    private string ChromeDriverPath { get; set; } = @"C:\WebDrivers\chromedriver.exe";
-    private string EdgeDriverPath { get; set; } = @"C:\WebDrivers\msedgedriver.exe";
     private string FirefoxDriverPath { get; set; } = @"C:\WebDrivers\geckodriver.exe";
-    private string IEDriverPath { get; set; } = @"C:\WebDrivers\IEWebDriver";
     private string BaseUrl { get; set; } = "https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx";
-    private bool IsConnected { get; set; }
 
     public BaltimoreCountyScraper(
         IDataContext dataContext,
-        IAddressDataServiceFactory addressDataServiceFactory)
+        IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory)
     {
         _dataContext = dataContext;
-        _addressDataServiceFactory = addressDataServiceFactory;
+        _groundRentProcessorDataServiceFactory = groundRentProcessorDataServiceFactory;
 
-        //var chromeOptions = new ChromeOptions();
-        //chromeOptions.AddArguments("--headless");
-        //ChromeDriver = new ChromeDriver(ChromeDriverPath, chromeOptions, TimeSpan.FromSeconds(30));
-
-        //var edgeOptions = new EdgeOptions();
-        //edgeOptions.AddArguments("--headless");
-        //EdgeDriver = new EdgeDriver(EdgeDriverPath, edgeOptions, TimeSpan.FromSeconds(30));
+        // For Amanda's laptop
+        //FirefoxProfile firefoxProfile = new(@"C:\Users\Jason Argo\AppData\Local\Mozilla\Firefox\Profiles\4x0ows5f.default-release-1670017618762");
+        //FirefoxOptions firefoxOptions = new();
+        //firefoxOptions.Profile = firefoxProfile;
+        //firefoxOptions.AddArguments("--headless");
+        //firefoxOptions.AddArguments("--binary C:\\Program Files\\Mozilla Firefox\\firefox.exe");
+        //FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
 
         FirefoxProfile firefoxProfile = new(@"C:\WebDrivers\FirefoxProfile-DetaultUser");
         FirefoxOptions firefoxOptions = new();
         firefoxOptions.Profile = firefoxProfile;
         firefoxOptions.AddArguments("--headless");
         FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
-
-        //var ieOptions = new InternetExplorerOptions();
-        //ieOptions.IgnoreZoomLevel = true;
-        //IEDriver = new InternetExplorerDriver(IEDriverPath, ieOptions, TimeSpan.FromSeconds(30));
     }
     public void AllocateWebDrivers(
         List<AddressModel> firefoxAddressList)
     {
-        //WebDriverModel chromeDriverModel = new WebDriverModel 
-        //{ 
-        //    Driver = ChromeDriver,
-        //    Input = ChromeInput,
-        //    AddressList = chromeAddressList
-        //};
-        //WebDriverModel edgeDriverModel = new WebDriverModel
-        //{
-        //    Driver = EdgeDriver,
-        //    Input = EdgeInput,
-        //    AddressList = edgeAddressList
-        //};
         WebDriverModel firefoxDriverModel = new WebDriverModel
         {
             Driver = FirefoxDriver,
             Input = FirefoxInput,
             AddressList = firefoxAddressList
         };
-        //WebDriverModel ieDriverModel = new WebDriverModel
-        //{
-        //    Driver = IEDriver,
-        //    Input = IEInput,
-        //    AddressList = ieAddressList
-        //};
 
         List<Task> tasks = new();
-        //tasks.Add(Task.Run(() => Scrape(chromeDriverModel)));
-        //tasks.Add(Task.Run(() => Scrape(edgeDriverModel)));
         tasks.Add(Task.Run(() => Scrape(firefoxDriverModel)));
-        //tasks.Add(Task.Run(() => Scrape(ieDriverModel)));
         Task.WaitAll(tasks.ToArray());
 
     }
@@ -114,7 +75,7 @@ public class BaltimoreCountyScraper : IRealPropertySearchScraper
                 currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
                 // Selecting "BALTIMORE COUNTY"
                 webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
-                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlCounty > option:nth-child(4)")));
+                webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlCounty > option:nth-child(5)")));
                 webDriverModel.Input.Click();
 
                 // Selecting "PROPERTY ACCOUNT IDENTIFIER"
@@ -125,15 +86,15 @@ public class BaltimoreCountyScraper : IRealPropertySearchScraper
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StartNavigationTemplateContainerID_btnContinue")));
                 webDriverModel.Input.Click();
 
-                // ChromeInput District
+                // Input Ward
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtDistrict")));
                 webDriverModel.Input.Clear();
                 webDriverModel.Input.SendKeys(address.Ward);
 
-                // ChromeInput AccountId
+                // Input AccountNumber
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementExists(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucEnterData_txtAccountIdentifier")));
                 webDriverModel.Input.Clear();
-                webDriverModel.Input.SendKeys(address.Section);
+                webDriverModel.Input.SendKeys(address.AccountNumber);
 
                 // Click Next button
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton")));
@@ -146,8 +107,8 @@ public class BaltimoreCountyScraper : IRealPropertySearchScraper
                         // Address does not exist in SDAT
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
-                            var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.DeleteAddress(address.AccountId);
+                            var groundRentProcessorDataService = _groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                            result = await groundRentProcessorDataService.Delete(address.AccountId);
                             Console.WriteLine($"{address.AccountId.Trim()} does not exist and was deleted.");
                         }
                     }
@@ -174,8 +135,8 @@ public class BaltimoreCountyScraper : IRealPropertySearchScraper
                             address.IsGroundRent = false;
                             using (var uow = _dataContext.CreateUnitOfWork())
                             {
-                                var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                                result = await addressDataService.CreateOrUpdateIsGroundRent(new AddressModel
+                                var groundRentProcessorDataService = _groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                result = await groundRentProcessorDataService.CreateOrUpdateSDATScraper(new AddressModel
                                 {
                                     AccountId = address.AccountId,
                                     IsGroundRent = address.IsGroundRent
@@ -201,8 +162,8 @@ public class BaltimoreCountyScraper : IRealPropertySearchScraper
                         address.IsGroundRent = true;
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
-                            var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.CreateOrUpdateIsGroundRent(new AddressModel
+                            var groundRentProcessorDataService = _groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                            result = await groundRentProcessorDataService.CreateOrUpdateSDATScraper(new AddressModel
                             {
                                 AccountId = address.AccountId,
                                 IsGroundRent = address.IsGroundRent

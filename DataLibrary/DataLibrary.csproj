@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Remove="Models\AddressClassMap.cs" />
+    <Compile Remove="Services\SDATScrapers\BaltimoreCityScraper.cs" />
   </ItemGroup>
 
   <ItemGroup>

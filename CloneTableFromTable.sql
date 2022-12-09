@@ -1,1 +1,1 @@
-﻿select * from dbo.[BaltimoreCity1];
+﻿insert into dbo.[BackUpAddress] SELECT * FROM dbo.[Address];

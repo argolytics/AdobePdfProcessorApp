@@ -32,8 +32,8 @@ public class Program
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();
             builder.Services.AddScoped<IDataContext>(s => new DataContext(configuration.GetConnectionString("Default")));
-            builder.Services.AddScoped<IAddressDataServiceFactory, AddressDataServiceFactory>();
-            builder.Services.AddScoped<IRealPropertySearchScraper, BaltimoreCityScraper>();
+            builder.Services.AddScoped<IGroundRentProcessorDataServiceFactory, BaltimoreCountyDataServiceFactory>();
+            builder.Services.AddScoped<IRealPropertySearchScraper, BaltimoreCountyScraper>();
             builder.Services.AddScoped<AccessTokenInformation>();
             var pdfSettings = new PDFServicesSettings();
             configuration.GetSection("PDFServices").Bind(pdfSettings);

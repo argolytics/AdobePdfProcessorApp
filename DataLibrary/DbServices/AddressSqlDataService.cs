@@ -5,7 +5,7 @@ using DataLibrary.DbAccess;
 
 namespace DataLibrary.DbServices;
 
-public class AddressSqlDataService : IAddressDataService
+public class AddressSqlDataService : IGroundRentProcessorDataService
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -13,51 +13,11 @@ public class AddressSqlDataService : IAddressDataService
     {
         _unitOfWork = unitOfWork;
     }
-    public async Task CreateOrUpdateFromSpecPrintFileForBaltimoreCity(AddressModel addressModel)
+    public async Task CreateOrUpdateSpecPrintFile(AddressModel addressModel)
     {
-        var parms = new
-        {
-            addressModel.AccountId,
-            addressModel.Ward,
-            addressModel.Section,
-            addressModel.Block,
-            addressModel.Lot,
-            addressModel.LandUseCode,
-            addressModel.YearBuilt
-        };
-        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSpecPrintFileForBaltimoreCity", parms,
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
+        return;
     }
-    public async Task CreateOrUpdateFromSpecPrintFileForBaltimoreCounty(AddressModel addressModel)
-    {
-        var parms = new
-        {
-            addressModel.AccountId,
-            addressModel.AccountNumber,
-            addressModel.Ward,
-            addressModel.LandUseCode,
-            addressModel.YearBuilt
-        };
-        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSpecPrintFileForBaltimoreCounty", parms,
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
-    }
-    public async Task CreateOrUpdateFromMDOpenDatasetCsvFile(AddressModel addressModel)
-    {
-        var parms = new
-        {
-            addressModel.AccountId,
-            addressModel.AccountNumber,
-            addressModel.Ward,
-            addressModel.Section,
-            addressModel.Block,
-            addressModel.Lot,
-            addressModel.LandUseCode,
-            addressModel.YearBuilt
-        };
-        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateMDOpenDatasetCsvFile", parms,
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
-    }
-    public async Task CreateOrUpdateFromSDATRedeemedFile(AddressModel addressModel)
+    public async Task CreateOrUpdateSDATRedeemedFile(AddressModel addressModel)
     {
         var parms = new
         {
@@ -67,7 +27,7 @@ public class AddressSqlDataService : IAddressDataService
         await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATRedeemedFile", parms,
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
     }
-    public async Task<bool> CreateOrUpdateIsGroundRent(AddressModel addressModel)
+    public async Task<bool> CreateOrUpdateSDATScraper(AddressModel addressModel)
     {
         try
         {
@@ -76,7 +36,7 @@ public class AddressSqlDataService : IAddressDataService
                 addressModel.AccountId,
                 addressModel.IsGroundRent
             };
-            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateIsGroundRent", parms,
+            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATScraper", parms,
                 commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
             return true;
         }
@@ -86,92 +46,17 @@ public class AddressSqlDataService : IAddressDataService
             return false;
         }
     }
-    public async Task<bool> CreateOrUpdateIsGroundRentBaltimoreCity1(AddressModel addressModel)
+    public async Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentNull(int amount)
     {
-        try
-        {
-            var parms = new
-            {
-                addressModel.AccountId,
-                addressModel.IsGroundRent
-            };
-            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateIsGroundRentBaltimoreCity1", parms,
-                commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return false;
-        }
-    }
-    public async Task<bool> CreateOrUpdateIsGroundRentBaltimoreCity2(AddressModel addressModel)
-    {
-        try
-        {
-            var parms = new
-            {
-                addressModel.AccountId,
-                addressModel.IsGroundRent
-            };
-            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateIsGroundRentBaltimoreCity2", parms,
-                commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return false;
-        }
-    }
-    public async Task<List<AddressModel>> ReadAddressTopAmountWhereIsGroundRentNull(int amount)
-    {
-        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadTopAmountWhereIsGroundRentNullAndYearBuiltIsZero", new { Amount = amount },
+        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadTopAmountWhereIsGroundRentNull", 
+            new { Amount = amount },
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
     }
-    public async Task<List<AddressModel>> ReadAddressTopAmountWhereIsGroundRentNullAndYearBuiltZeroBaltimoreCity1(int amount)
-    {
-        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadTopAmountWhereIsGroundRentNullAndYearBuiltIsZeroBaltimoreCity1", new { Amount = amount },
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
-    }
-    public async Task<List<AddressModel>> ReadAddressTopAmountWhereIsGroundRentNullAndYearBuiltZeroBaltimoreCity2(int amount)
-    {
-        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadTopAmountWhereIsGroundRentNullAndYearBuiltIsZeroBaltimoreCity2", new { Amount = amount },
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
-    }
-    public async Task<bool> DeleteAddress(string accountId)
+    public async Task<bool> Delete(string accountId)
     {
         try
         {
             await _unitOfWork.Connection.ExecuteAsync("spAddress_Delete", new { AccountId = accountId },
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return false;
-        }
-    }
-    public async Task<bool> DeleteBaltimoreCity1(string accountId)
-    {
-        try
-        {
-            await _unitOfWork.Connection.ExecuteAsync("spBaltimoreCity1_Delete", new { AccountId = accountId },
-            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return false;
-        }
-    }
-    public async Task<bool> DeleteBaltimoreCity2(string accountId)
-    {
-        try
-        {
-            await _unitOfWork.Connection.ExecuteAsync("spBaltimoreCity2_Delete", new { AccountId = accountId },
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
             return true;
         }

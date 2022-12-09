@@ -9,17 +9,5 @@
     [LandUseCode] NCHAR(1) NULL,
     [YearBuilt] SMALLINT NULL,
     [IsGroundRent] BIT NULL,
-    [IsRedeemed] BIT NULL,
-    [IsLegible] BIT NULL,
-    [NotLegibleList] NCHAR NULL,
-    [PaymentAmount] SMALLMONEY NULL,
-    [PaymentFrequency] NCHAR(50) NULL,
-    [PaymentDateAnnual] SMALLDATETIME NULL,
-    [PaymentDateSemiAnnual1] SMALLDATETIME NULL,
-    [PaymentDateSemiAnnual2] SMALLDATETIME NULL,
-    [PaymentDateQuarterly1] SMALLDATETIME NULL,
-    [PaymentDateQuarterly2] SMALLDATETIME NULL,
-    [PaymentDateQuarterly3] SMALLDATETIME NULL,
-    [PaymentDateQuarterly4] SMALLDATETIME NULL,
-    [PaymentDateOther] SMALLDATETIME NULL
+    [IsRedeemed] BIT NULL
 )

@@ -20,7 +20,7 @@
 @inject GetDownloadStatus getDownloadStatus
 @inject DownloadPdf downloadPdf
 @inject IDataContext dataContext
-@inject IAddressDataServiceFactory addressDataServiceFactory
+@inject IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory
 
 <div class="row mb-3 mt-3">
     <div class="container">
@@ -28,7 +28,6 @@
             <InputFile OnChange="OnInputFileChange" multiple></InputFile>
             <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
             <button class="btn btn-secondary" type="submit" @onclick="ProcessAdobePDF">ProcessAdobePDF</button>
-            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFileForBaltimoreCity">ProcessBaltimoreCity</button>
             <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFileForBaltimoreCounty">ProcessBaltimoreCounty</button>
         </div>
         @if(selectedFiles is not null)
@@ -147,9 +146,8 @@
                                 {
                                     isRedeemed = false; 
                                 }
-                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                                // read address from db, if address.YearBuilt > 0, if address.LandUseCode == "R"
-                                await addressDataService.CreateOrUpdateFromSDATRedeemedFile(new AddressModel()
+                                var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                await groundRentProcessorDataService.CreateOrUpdateSDATRedeemedFile(new AddressModel()
                                     {
                                         AccountId = accountId,
                                         IsRedeemed = isRedeemed
@@ -167,58 +165,58 @@
             tableDirectory.Delete(true);
         }
     }
-    private async void ProcessSpecPrintFileForBaltimoreCity()
-    {
-        foreach (var file in files)
-        {
-            using (var streamReader = new StreamReader(file.UploadPath))
-            {
-                using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
-                {
-                    csvReader.Read();
+    //private async void ProcessSpecPrintFileForBaltimoreCity()
+    //{
+    //    foreach (var file in files)
+    //    {
+    //        using (var streamReader = new StreamReader(file.UploadPath))
+    //        {
+    //            using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+    //            {
+    //                csvReader.Read();
 
-                    while (csvReader.Read())
-                    {
-                        using (var uow = dataContext.CreateUnitOfWork())
-                        {
-                            var landUseCode = csvReader.Parser.RawRecord.Substring(428, 1);
-                            var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
-                            var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
+    //                while (csvReader.Read())
+    //                {
+    //                    using (var uow = dataContext.CreateUnitOfWork())
+    //                    {
+    //                        var landUseCode = csvReader.Parser.RawRecord.Substring(428, 1);
+    //                        var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
+    //                        var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
 
-                            if (yearBuiltInt <= 2014 &&
-                                (landUseCode == "E" || landUseCode == "R"))
-                            {
-                                var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
-                                var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
-                                var section = csvReader.Parser.RawRecord.Substring(390, 2).Replace(" ", "");
-                                var block = csvReader.Parser.RawRecord.Substring(392, 5).Replace(" ", "");
-                                var lot = csvReader.Parser.RawRecord.Substring(398, 4).Replace(" ", "");
+    //                        if (yearBuiltInt <= 2014 &&
+    //                            (landUseCode == "E" || landUseCode == "R"))
+    //                        {
+    //                            var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
+    //                            var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
+    //                            var section = csvReader.Parser.RawRecord.Substring(390, 2).Replace(" ", "");
+    //                            var block = csvReader.Parser.RawRecord.Substring(392, 5).Replace(" ", "");
+    //                            var lot = csvReader.Parser.RawRecord.Substring(398, 4).Replace(" ", "");
 
-                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                                await addressDataService.CreateOrUpdateFromSpecPrintFileForBaltimoreCity(
-                                new AddressModel()
-                                    {
-                                        AccountId = accountId,
-                                        Ward = ward,
-                                        Section = section,
-                                        Block = block,
-                                        Lot = lot,
-                                        LandUseCode = landUseCode,
-                                        YearBuilt = yearBuiltInt
-                                    });
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-            File.Delete(file.UploadPath);
-            Console.WriteLine("Processing complete.");
-        }
-    }
+    //                            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
+    //                            await addressDataService.CreateOrUpdateFromSpecPrintFileForBaltimoreCity(
+    //                            new AddressModel()
+    //                                {
+    //                                    AccountId = accountId,
+    //                                    Ward = ward,
+    //                                    Section = section,
+    //                                    Block = block,
+    //                                    Lot = lot,
+    //                                    LandUseCode = landUseCode,
+    //                                    YearBuilt = yearBuiltInt
+    //                                });
+    //                        }
+    //                        else
+    //                        {
+    //                            continue;
+    //                        }
+    //                    }
+    //                }
+    //            }
+    //        }
+    //        File.Delete(file.UploadPath);
+    //        Console.WriteLine("Processing complete.");
+    //    }
+    //}
     private async void ProcessSpecPrintFileForBaltimoreCounty()
     {
         foreach (var file in files)
@@ -240,12 +238,12 @@
                             if (yearBuiltInt <= 2014 &&
                                 (landUseCode == "E" || landUseCode == "R"))
                     {
-                                var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
-                                var accountNumber = csvReader.Parser.RawRecord.Substring(0, 0).Replace(" ", "");
+                                var accountId = csvReader.Parser.RawRecord.Substring(0, 16).Replace(" ", "");
+                                var accountNumber = csvReader.Parser.RawRecord.Substring(4, 12).Replace(" ", "");
                                 var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
 
-                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                                await addressDataService.CreateOrUpdateFromSpecPrintFileForBaltimoreCounty(
+                                var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                await groundRentProcessorDataService.CreateOrUpdateSpecPrintFile(
                                 new AddressModel()
                                     {
                                         AccountId = accountId,

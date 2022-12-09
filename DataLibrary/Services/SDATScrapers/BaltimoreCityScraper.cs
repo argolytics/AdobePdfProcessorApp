@@ -2,10 +2,7 @@
 using DataLibrary.DbServices;
 using DataLibrary.Models;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
-using OpenQA.Selenium.IE;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 
@@ -117,8 +114,8 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_StepNavigationTemplateContainerID_btnStepNextButton")));
                 webDriverModel.Input.Click();
                 if (string.IsNullOrEmpty(section)
-                    && string.IsNullOrEmpty(block)
-                    && string.IsNullOrEmpty(lot))
+                    || string.IsNullOrEmpty(block)
+                    || string.IsNullOrEmpty(lot))
                 {
                     // Address does not have section, block, and lot
                     using (var uow = _dataContext.CreateUnitOfWork())

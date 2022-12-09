@@ -6,13 +6,13 @@
 @using DataLibrary.Services.SDATScrapers
 @inject IRealPropertySearchScraper scraper
 @inject IDataContext dataContext
-@inject IAddressDataServiceFactory addressDataServiceFactory
+@inject IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory
 
 <div class="row mb-3 mt-3">
     <div class="container">
         <div>
             <p>Click Once</p>
-            <button class="btn btn-danger" type="submit" @onclick="ScrapeBaltimoreCity">ScrapeBaltimoreCity</button>
+            <button class="btn btn-danger" type="submit" @onclick="ScrapeSDAT">Scrape</button>
             @*<button class="btn btn-danger" type="submit" @onclick="CloseApp">CloseApp</button>*@
         </div>
     </div>
@@ -25,17 +25,14 @@
 </div>
 
 @code {
-    private int amountToScrape = 15000;
-    private async Task ScrapeBaltimoreCity()
+    private int amountToScrape = 10000;
+    private async Task ScrapeSDAT()
     {
-        List<AddressModel> chromeAddressList;
-        List<AddressModel> edgeAddressList;
         List<AddressModel> firefoxAddressList;
-        List<AddressModel> ieAddressList;
         using (var uow = dataContext.CreateUnitOfWork())
         {
-            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            firefoxAddressList = await addressDataService.ReadAddressTopAmountWhereIsGroundRentNullAndYearBuiltZeroBaltimoreCity1(amountToScrape);
+            var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+            firefoxAddressList = await groundRentProcessorDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
         scraper.AllocateWebDrivers(firefoxAddressList);
         Console.WriteLine("Scrape complete.");
