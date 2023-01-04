@@ -9,5 +9,6 @@ namespace DataLibrary.DbServices
         Task<bool> CreateOrUpdateSDATScraper(AddressModel addressModel);
         Task<bool> Delete(string accountId);
         Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentNull(int amount);
+        Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentTrue(int amount);
     }
 }

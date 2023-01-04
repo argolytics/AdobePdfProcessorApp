@@ -75,4 +75,9 @@ public class BaltimoreCountySqlDataService : IGroundRentProcessorDataService
             return false;
         }
     }
+
+    public Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentTrue(int amount)
+    {
+        throw new NotImplementedException();
+    }
 }

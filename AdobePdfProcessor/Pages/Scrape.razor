@@ -25,7 +25,7 @@
 </div>
 
 @code {
-    private int amountToScrape = 10000;
+    private int amountToScrape = 40000;
     private async Task ScrapeSDAT()
     {
         List<AddressModel> firefoxAddressList;
@@ -35,7 +35,6 @@
             firefoxAddressList = await groundRentProcessorDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
         scraper.AllocateWebDrivers(firefoxAddressList);
-        Console.WriteLine("Scrape complete.");
     }
     private void CloseApp()
     {

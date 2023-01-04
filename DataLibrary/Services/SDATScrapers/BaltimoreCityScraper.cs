@@ -11,7 +11,7 @@ namespace DataLibrary.Services.SDATScrapers;
 public class BaltimoreCityScraper : IRealPropertySearchScraper
 {
     private readonly IDataContext _dataContext;
-    private readonly IAddressDataServiceFactory _addressDataServiceFactory;
+    private readonly IGroundRentProcessorDataServiceFactory _groundRentDataServiceFactory;
     private WebDriver FirefoxDriver { get; set; } = null;
     private IWebElement FirefoxInput { get; set; }
     private string FirefoxDriverPath { get; set; } = @"C:\WebDrivers\geckodriver.exe";
@@ -19,10 +19,10 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
 
     public BaltimoreCityScraper(
         IDataContext dataContext,
-        IAddressDataServiceFactory addressDataServiceFactory)
+        IGroundRentProcessorDataServiceFactory groundRentDataServiceFactory)
     {
         _dataContext = dataContext;
-        _addressDataServiceFactory = addressDataServiceFactory;
+        _groundRentDataServiceFactory = groundRentDataServiceFactory;
 
         // For Amanda's laptop
         //FirefoxProfile firefoxProfile = new(@"C:\Users\Jason Argo\AppData\Local\Mozilla\Firefox\Profiles\4x0ows5f.default-release-1670017618762");
@@ -120,8 +120,8 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                     // Address does not have section, block, and lot
                     using (var uow = _dataContext.CreateUnitOfWork())
                     {
-                        var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                        result = await addressDataService.DeleteBaltimoreCity1(address.AccountId);
+                        var groundRentDataService = _groundRentDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                        result = await groundRentDataService.Delete(address.AccountId);
                         Console.WriteLine($"{address.AccountId.Trim()} does not have a section, block, and lot so it was deleted.");
                     }
                 }
@@ -133,8 +133,8 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                         // Address does not exist in SDAT
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
-                            var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.DeleteBaltimoreCity1(address.AccountId);
+                            var groundRentDataService = _groundRentDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                            result = await groundRentDataService.Delete(address.AccountId);
                             Console.WriteLine($"{address.AccountId.Trim()} does not exist and was deleted.");
                         }
                     }
@@ -161,8 +161,8 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                             address.IsGroundRent = false;
                             using (var uow = _dataContext.CreateUnitOfWork())
                             {
-                                var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                                result = await addressDataService.CreateOrUpdateIsGroundRentBaltimoreCity1(new AddressModel
+                                var groundRentDataService = _groundRentDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                result = await groundRentDataService.CreateOrUpdateSDATScraper(new AddressModel
                                 {
                                     AccountId = address.AccountId,
                                     IsGroundRent = address.IsGroundRent
@@ -188,8 +188,8 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
                         address.IsGroundRent = true;
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
-                            var addressDataService = _addressDataServiceFactory.CreateAddressDataService(uow);
-                            result = await addressDataService.CreateOrUpdateIsGroundRentBaltimoreCity1(new AddressModel
+                            var groundRentDataService = _groundRentDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                            result = await groundRentDataService.CreateOrUpdateSDATScraper(new AddressModel
                             {
                                 AccountId = address.AccountId,
                                 IsGroundRent = address.IsGroundRent
@@ -211,22 +211,18 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
         catch (NoSuchElementException ex)
         {
             Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
         }
         catch (StaleElementReferenceException ex)
         {
             Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
         }
         catch (ArgumentNullException ex)
         {
             Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
         }
         catch (WebDriverException ex)
         {
             Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
         }
         webDriverModel.Driver.Quit();
     }

@@ -63,20 +63,34 @@
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\Stored Procedures\Address" />
     <Folder Include="dbo\Stored Procedures\BaltimoreCounty" />
+    <Folder Include="dbo\Stored Procedures\BaltimoreCity" />
+    <Folder Include="dbo\Stored Procedures\MontgomeryCounty" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Stored Procedures\Address\spAddress_CreateOrUpdateSDATScraper.sql" />
     <Build Include="dbo\Stored Procedures\Address\spAddress_CreateOrUpdateSDATRedeemedFile.sql" />
     <Build Include="dbo\Stored Procedures\Address\spAddress_Delete.sql" />
     <Build Include="dbo\Stored Procedures\Address\spAddress_ReadTopAmountWhereIsGroundRentNull.sql" />
-    <Build Include="dbo\Tables\Address.sql" />
     <Build Include="dbo\Stored Procedures\BaltimoreCounty\spBaltimoreCounty_CreateOrUpdateSpecPrintFile.sql" />
     <Build Include="dbo\Tables\BaltimoreCounty.sql" />
-    <Build Include="dbo\Tables\BackUpAddress.sql" />
     <Build Include="dbo\Stored Procedures\BaltimoreCounty\spBaltimoreCounty_CreateOrUpdateSDATRedeemedFile.sql" />
     <Build Include="dbo\Stored Procedures\BaltimoreCounty\spBaltimoreCounty_Delete.sql" />
     <Build Include="dbo\Stored Procedures\BaltimoreCounty\spBaltimoreCounty_ReadTopAmountWhereIsGroundRentNull.sql" />
     <Build Include="dbo\Stored Procedures\BaltimoreCounty\spBaltimoreCounty_CreateOrUpdateSDATScraper.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spBaltimoreCity_CreateOrUpdateSpecPrintFile.sql" />
+    <Build Include="dbo\Tables\BaltimoreCity.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spBaltimoreCity_CreateOrUpdateSDATScraper.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spBaltimoreCity_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\BaltimoreCity\spBaltimoreCity_ReadTopAmountWhereIsGroundRentNull.sql" />
+    <Build Include="dbo\Stored Procedures\MontgomeryCounty\spMontgomeryCounty_CreateOrUpdateSpecPrintFile.sql" />
+    <Build Include="dbo\Tables\MontgomeryCounty.sql" />
+    <Build Include="dbo\Stored Procedures\MontgomeryCounty\spMontgomeryCounty_Delete.sql" />
+    <Build Include="dbo\Stored Procedures\MontgomeryCounty\spMontgomeryCounty_CreateOrUpdateSDATRedeemedFile.sql" />
+    <Build Include="dbo\Stored Procedures\MontgomeryCounty\spMontgomeryCounty_CreateOrUpdateSDATScraper.sql" />
+    <Build Include="dbo\Stored Procedures\MontgomeryCounty\spMontgomeryCounty_ReadTopAmountWhereIsGroundRentNull.sql" />
+    <Build Include="dbo\Tables\GroundRentAllCounties.sql" />
+    <Build Include="dbo\Tables\BackUp.sql" />
+    <Build Include="dbo\Stored Procedures\MontgomeryCounty\spMontgomeryCounty_ReadTopAmountWhereIsGroundRentTrue.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GroundRentProcessorDb.publish.xml" />

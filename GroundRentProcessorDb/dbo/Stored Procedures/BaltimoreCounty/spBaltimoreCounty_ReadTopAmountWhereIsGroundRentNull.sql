@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[spBaltimoreCounty_ReadTopAmountWhereIsGroundRentNull]
-@Amount smallint
+@Amount int
 AS
 begin
 	select top (@Amount) [AccountId], [AccountNumber], [Ward]
