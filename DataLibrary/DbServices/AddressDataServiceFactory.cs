@@ -1,7 +1,7 @@
 ﻿using DataLibrary.DbAccess;
 
 namespace DataLibrary.DbServices;
-public class AddressDataServiceFactory : IAddressDataServiceFactory
+public class AddressDataServiceFactory : IGroundRentProcessorDataServiceFactory
 {
-    public IAddressDataService CreateAddressDataService(IUnitOfWork uow) => new AddressSqlDataService(uow);
+    public IGroundRentProcessorDataService CreateGroundRentProcessorDataService(IUnitOfWork uow) => new AddressSqlDataService(uow);
 }

@@ -2,10 +2,11 @@
 @using DataLibrary.DbAccess
 @using DataLibrary.DbServices
 @using DataLibrary.Models
-@using DataLibrary.Services
+@using DataLibrary.Services;
+@using DataLibrary.Services.SDATScrapers
 @inject IRealPropertySearchScraper scraper
 @inject IDataContext dataContext
-@inject IAddressDataServiceFactory addressDataServiceFactory
+@inject IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory
 
 <div class="row mb-3 mt-3">
     <div class="container">
@@ -24,24 +25,16 @@
 </div>
 
 @code {
+    private int amountToScrape = 40000;
     private async Task ScrapeSDAT()
     {
-        List<AddressModel> chromeAddressList;
-        List<AddressModel> edgeAddressList;
         List<AddressModel> firefoxAddressList;
-        List<AddressModel> ieAddressList;
         using (var uow = dataContext.CreateUnitOfWork())
         {
-            var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-            firefoxAddressList = await addressDataService.ReadGroundRentJasonTopAmountWhereIsGroundRentNull();
+            var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+            firefoxAddressList = await groundRentProcessorDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
-        //using (var uow = dataContext.CreateUnitOfWork())
-        //{
-        //    var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-        //    firefoxAddressList = await addressDataService.ReadGroundRentAmandaTopAmountWhereIsGroundRentNull();
-        //}
         scraper.AllocateWebDrivers(firefoxAddressList);
-        Console.WriteLine("Scrape complete.");
     }
     private void CloseApp()
     {

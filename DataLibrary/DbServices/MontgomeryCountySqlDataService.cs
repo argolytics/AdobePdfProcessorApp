@@ -5,17 +5,26 @@ using DataLibrary.DbAccess;
 
 namespace DataLibrary.DbServices;
 
-public class AddressSqlDataService : IGroundRentProcessorDataService
+public class MontgomeryCountySqlDataService : IGroundRentProcessorDataService
 {
     private readonly IUnitOfWork _unitOfWork;
 
-    public AddressSqlDataService(IUnitOfWork unitOfWork)
+    public MontgomeryCountySqlDataService(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
     }
     public async Task CreateOrUpdateSpecPrintFile(AddressModel addressModel)
     {
-        return;
+        var parms = new
+        {
+            addressModel.AccountId,
+            addressModel.AccountNumber,
+            addressModel.Ward,
+            addressModel.LandUseCode,
+            addressModel.YearBuilt
+        };
+        await _unitOfWork.Connection.ExecuteAsync("spMontgomeryCounty_CreateOrUpdateSpecPrintFile", parms,
+            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
     }
     public async Task CreateOrUpdateSDATRedeemedFile(AddressModel addressModel)
     {
@@ -24,7 +33,7 @@ public class AddressSqlDataService : IGroundRentProcessorDataService
             addressModel.AccountId,
             addressModel.IsRedeemed
         };
-        await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATRedeemedFile", parms,
+        await _unitOfWork.Connection.ExecuteAsync("spMontgomeryCounty_CreateOrUpdateSDATRedeemedFile", parms,
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
     }
     public async Task<bool> CreateOrUpdateSDATScraper(AddressModel addressModel)
@@ -36,7 +45,7 @@ public class AddressSqlDataService : IGroundRentProcessorDataService
                 addressModel.AccountId,
                 addressModel.IsGroundRent
             };
-            await _unitOfWork.Connection.ExecuteAsync("spAddress_CreateOrUpdateSDATScraper", parms,
+            await _unitOfWork.Connection.ExecuteAsync("spMontgomeryCounty_CreateOrUpdateSDATScraper", parms,
                 commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
             return true;
         }
@@ -48,7 +57,13 @@ public class AddressSqlDataService : IGroundRentProcessorDataService
     }
     public async Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentNull(int amount)
     {
-        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spAddress_ReadTopAmountWhereIsGroundRentNull", 
+        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spMontgomeryCounty_ReadTopAmountWhereIsGroundRentNull",
+            new { Amount = amount },
+            commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
+    }
+    public async Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentTrue(int amount)
+    {
+        return (await _unitOfWork.Connection.QueryAsync<AddressModel>("spMontgomeryCounty_ReadTopAmountWhereIsGroundRentTrue",
             new { Amount = amount },
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction)).ToList();
     }
@@ -56,7 +71,7 @@ public class AddressSqlDataService : IGroundRentProcessorDataService
     {
         try
         {
-            await _unitOfWork.Connection.ExecuteAsync("spAddress_Delete", new { AccountId = accountId },
+            await _unitOfWork.Connection.ExecuteAsync("spMontgomeryCounty_Delete", new { AccountId = accountId },
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
             return true;
         }
@@ -65,10 +80,5 @@ public class AddressSqlDataService : IGroundRentProcessorDataService
             Console.WriteLine(ex.Message);
             return false;
         }
-    }
-
-    public Task<List<AddressModel>> ReadTopAmountWhereIsGroundRentTrue(int amount)
-    {
-        throw new NotImplementedException();
     }
 }

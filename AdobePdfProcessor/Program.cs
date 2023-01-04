@@ -2,11 +2,14 @@ using DataLibrary.DbAccess;
 using DataLibrary.DbServices;
 using DataLibrary.Helpers;
 using DataLibrary.HttpClients;
-using DataLibrary.Services;
 using DataLibrary.Settings;
 using System.Net.Http.Headers;
 using Serilog;
-using Microsoft.AspNetCore.SignalR;
+using OpenQA.Selenium.Support.UI;
+using DataLibrary.Services.SDATScrapers;
+using AutoMapper;
+using DataLibrary.AutoMapperProfiles;
+using DataLibrary;
 
 namespace GroundRentProcessor;
 
@@ -32,60 +35,65 @@ public class Program
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();
             builder.Services.AddScoped<IDataContext>(s => new DataContext(configuration.GetConnectionString("Default")));
-            builder.Services.AddScoped<IAddressDataServiceFactory, AddressDataServiceFactory>();
-            builder.Services.AddScoped<IRealPropertySearchScraper, RealPropertySearchScraper>();
-            builder.Services.AddScoped<AccessTokenInformation>();
-            var pdfSettings = new PDFServicesSettings();
-            configuration.GetSection("PDFServices").Bind(pdfSettings);
-            builder.Services.Configure<PDFServicesSettings>(opt =>
+            builder.Services.AddScoped<IGroundRentProcessorDataServiceFactory, MontgomeryCountyDataServiceFactory>();
+            builder.Services.AddScoped<IRealPropertySearchScraper, MontgomeryCountyScraper>();
+            builder.Services.AddAutoMapper(typeof(AutoMapperEntryPoint).Assembly);
+            var mapper = new MapperConfiguration(options =>
             {
-                opt.ClientId = pdfSettings.ClientId;
-                opt.ClientSecret = pdfSettings.ClientSecret;
-                opt.Sub = pdfSettings.Sub;
-                opt.Issue = pdfSettings.Issue;
+                options.AddProfile<AddressProfile>();
             });
+            //builder.Services.AddScoped<AccessTokenInformation>();
+            //         var pdfSettings = new PDFServicesSettings();
+            //         configuration.GetSection("PDFServices").Bind(pdfSettings);
+            //         builder.Services.Configure<PDFServicesSettings>(opt =>
+            //         {
+            //             opt.ClientId = pdfSettings.ClientId;
+            //             opt.ClientSecret = pdfSettings.ClientSecret;
+            //             opt.Sub = pdfSettings.Sub;
+            //             opt.Issue = pdfSettings.Issue;
+            //         });
 
             // Http clients
-            builder.Services.AddScoped<GetUploadUri>();
-            builder.Services.AddScoped<UploadPdf>();
-            builder.Services.AddScoped<ExtractPdf>();
-            builder.Services.AddScoped<GetDownloadStatus>();
-            builder.Services.AddScoped<DownloadPdf>();
-            builder.Services.AddTransient<AccessTokenDelegatingHandler>();
-            builder.Services.AddHttpClient("jwt", client =>
-            {
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            });
-            builder.Services.AddHttpClient("getUploadUri", client =>
-            {
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            }).AddHttpMessageHandler<AccessTokenDelegatingHandler>();
-            builder.Services.AddHttpClient("uploadPdf", client =>
-            {
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
-                client.DefaultRequestHeaders.Add("Connection", "Keep-Alive");
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/pdf"));
-            });
-            builder.Services.AddHttpClient("extractPdf", client =>
-            {
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            }).AddHttpMessageHandler<AccessTokenDelegatingHandler>();
-            builder.Services.AddHttpClient("getDownloadStatus", client =>
-            {
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
-            }).AddHttpMessageHandler<AccessTokenDelegatingHandler>();
-            builder.Services.AddHttpClient("downloadPdf", client =>
-            {
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
-            });
+            //builder.Services.AddScoped<GetUploadUri>();
+            //builder.Services.AddScoped<UploadPdf>();
+            //builder.Services.AddScoped<ExtractPdf>();
+            //builder.Services.AddScoped<GetDownloadStatus>();
+            //builder.Services.AddScoped<DownloadPdf>();
+            //builder.Services.AddTransient<AccessTokenDelegatingHandler>();
+            //builder.Services.AddHttpClient("jwt", client =>
+            //{
+            //    client.DefaultRequestHeaders.Accept.Clear();
+            //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //});
+            //builder.Services.AddHttpClient("getUploadUri", client =>
+            //{
+            //    client.DefaultRequestHeaders.Accept.Clear();
+            //    client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
+            //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //}).AddHttpMessageHandler<AccessTokenDelegatingHandler>();
+            //builder.Services.AddHttpClient("uploadPdf", client =>
+            //{
+            //    client.DefaultRequestHeaders.Accept.Clear();
+            //    client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
+            //    client.DefaultRequestHeaders.Add("Connection", "Keep-Alive");
+            //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/pdf"));
+            //});
+            //builder.Services.AddHttpClient("extractPdf", client =>
+            //{
+            //    client.DefaultRequestHeaders.Accept.Clear();
+            //    client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
+            //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //}).AddHttpMessageHandler<AccessTokenDelegatingHandler>();
+            //builder.Services.AddHttpClient("getDownloadStatus", client =>
+            //{
+            //    client.DefaultRequestHeaders.Accept.Clear();
+            //    client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
+            //}).AddHttpMessageHandler<AccessTokenDelegatingHandler>();
+            //builder.Services.AddHttpClient("downloadPdf", client =>
+            //{
+            //    client.DefaultRequestHeaders.Accept.Clear();
+            //    client.DefaultRequestHeaders.Add("x-api-key", pdfSettings.ClientId);
+            //});
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

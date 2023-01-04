@@ -1,6 +1,8 @@
 ﻿@page "/extract"
 @using System.IO
 @using CsvHelper
+@using CsvHelper.Configuration
+@using CsvHelper.TypeConversion
 @using DataLibrary.DbAccess
 @using DataLibrary.DbServices
 @using DataLibrary.Helpers
@@ -11,14 +13,14 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.IO.Compression;
+@using DataLibrary.Services.SDATScrapers;
 @inject GetUploadUri getUploadUri
 @inject UploadPdf uploadPdf
 @inject ExtractPdf extractPdf
 @inject GetDownloadStatus getDownloadStatus
 @inject DownloadPdf downloadPdf
-@inject IRealPropertySearchScraper scraper
 @inject IDataContext dataContext
-@inject IAddressDataServiceFactory addressDataServiceFactory
+@inject IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory
 
 <div class="row mb-3 mt-3">
     <div class="container">
@@ -26,7 +28,8 @@
             <InputFile OnChange="OnInputFileChange" multiple></InputFile>
             <button class="btn btn-primary" type="submit" @onclick="UploadToLocal">UploadToLocal</button>
             <button class="btn btn-secondary" type="submit" @onclick="ProcessAdobePDF">ProcessAdobePDF</button>
-            <button class="btn btn-secondary" type="submit" @onclick="ProcessSpecPrintFile">ProcessSpecPrintFile</button>
+            @*<button class="btn btn-secondary" type="submit" @onclick="ProcessBaltimoreCity">ProcessBaltimoreCity</button>*@
+            <button class="btn btn-secondary" type="submit" @onclick="ProcessMontgomeryCounty">ProcessMontgomeryCounty</button>
         </div>
         @if(selectedFiles is not null)
         {
@@ -47,7 +50,7 @@
     private IReadOnlyList<IBrowserFile>? selectedFiles;
     private List<FileModel> files = new();
     private string Message = "No file(s) selected";
-    private long maxAllowedBufferSize = 1024 * 1024 * 200;
+    private long maxAllowedBufferSize = 1024 * 1024 * 500;
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -77,6 +80,7 @@
             fileStream.Dispose();
             stream.Close();
             stream.Dispose();
+            Console.WriteLine($"{file.File.Name} upload complete.");
         }
         Message = $"{files.Count} file(s) uploaded on server";
         this.StateHasChanged();
@@ -142,9 +146,8 @@
                                 {
                                     isRedeemed = false; 
                                 }
-                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                                // read address from db, if address.YearBuilt > 0, if address.LandUseCode == "R"
-                                await addressDataService.CreateOrUpdateFromSDATRedeemedFile(new AddressModel()
+                                var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                await groundRentProcessorDataService.CreateOrUpdateSDATRedeemedFile(new AddressModel()
                                     {
                                         AccountId = accountId,
                                         IsRedeemed = isRedeemed
@@ -162,7 +165,59 @@
             tableDirectory.Delete(true);
         }
     }
-    private async void ProcessSpecPrintFile()
+    //private async void ProcessBaltimoreCity()
+    //{
+    //    foreach (var file in files)
+    //    {
+    //        using (var streamReader = new StreamReader(file.UploadPath))
+    //        {
+    //            using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+    //            {
+    //                csvReader.Read();
+
+    //                while (csvReader.Read())
+    //                {
+    //                    using (var uow = dataContext.CreateUnitOfWork())
+    //                    {
+    //                        var landUseCode = csvReader.Parser.RawRecord.Substring(428, 1);
+    //                        var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
+    //                        var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
+
+    //                        if (yearBuiltInt >= 2015 &&
+    //                            (landUseCode == "E" || landUseCode == "R"))
+    //                        {
+    //                            var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
+    //                            var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
+    //                            var section = csvReader.Parser.RawRecord.Substring(390, 2).Replace(" ", "");
+    //                            var block = csvReader.Parser.RawRecord.Substring(392, 5).Replace(" ", "");
+    //                            var lot = csvReader.Parser.RawRecord.Substring(398, 4).Replace(" ", "");
+
+    //                            var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+    //                            await groundRentProcessorDataService.CreateOrUpdateSpecPrintFile(
+    //                            new AddressModel()
+    //                                {
+    //                                    AccountId = accountId,
+    //                                    Ward = ward,
+    //                                    Section = section,
+    //                                    Block = block,
+    //                                    Lot = lot,
+    //                                    LandUseCode = landUseCode,
+    //                                    YearBuilt = yearBuiltInt
+    //                                });
+    //                        }
+    //                        else
+    //                        {
+    //                            continue;
+    //                        }
+    //                    }
+    //                }
+    //            }
+    //        }
+    //        File.Delete(file.UploadPath);
+    //        Console.WriteLine("Processing complete.");
+    //    }
+    //}
+    private async void ProcessMontgomeryCounty()
     {
         foreach (var file in files)
         {
@@ -176,27 +231,24 @@
                     {
                         using (var uow = dataContext.CreateUnitOfWork())
                         {
-                            var landUseCode = csvReader.Parser.RawRecord.Substring(428, 1);
-                            var yearBuiltString = csvReader.Parser.RawRecord.Substring(1577, 4);
-                            var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
-
-                            if(landUseCode == "E" && yearBuiltInt <= 2014 && yearBuiltInt > 0)
+                            var rowArray = csvReader.Parser.RawRecord.Split(',');
+                            var landUseCode = rowArray[2];
+                            
+                            if (landUseCode == "E" || landUseCode == "R")
                             {
-                                var accountId = csvReader.Parser.RawRecord.Substring(2, 16).Replace(" ", "");
-                                var ward = csvReader.Parser.RawRecord.Substring(2, 2).Replace(" ", "");
-                                var section = csvReader.Parser.RawRecord.Substring(390, 2).Replace(" ", "");
-                                var block = csvReader.Parser.RawRecord.Substring(392, 5).Replace(" ", "");
-                                var lot = csvReader.Parser.RawRecord.Substring(398, 4).Replace(" ", "");
+                                var accountNumber = rowArray[0];
+                                var ward = rowArray[1];
+                                var yearBuiltString = rowArray[3];
+                                var yearBuilt = int.TryParse(yearBuiltString, out int yearBuiltInt);
+                                var accountId = "16" + ward + accountNumber;
 
-                                var addressDataService = addressDataServiceFactory.CreateAddressDataService(uow);
-                                await addressDataService.CreateOrUpdateFromSpecPrintFile(
+                                var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                await groundRentProcessorDataService.CreateOrUpdateSpecPrintFile(
                                 new AddressModel()
                                     {
                                         AccountId = accountId,
+                                        AccountNumber = accountNumber,
                                         Ward = ward,
-                                        Section = section,
-                                        Block = block,
-                                        Lot = lot,
                                         LandUseCode = landUseCode,
                                         YearBuilt = yearBuiltInt
                                     });
@@ -210,6 +262,7 @@
                 }
             }
             File.Delete(file.UploadPath);
+            Console.WriteLine("Processing complete.");
         }
     }
 }

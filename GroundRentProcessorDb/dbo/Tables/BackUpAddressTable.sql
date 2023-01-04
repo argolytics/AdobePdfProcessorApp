@@ -1,6 +1,7 @@
 ﻿CREATE TABLE [dbo].[BackUpAddressTable]
 (
 	[AccountId]  NCHAR (16) NULL,
+    [AccountNumber] NCHAR (16) NULL,
     [Ward]  NCHAR (2) NULL,
     [Section]  NCHAR (2) NULL,
     [Block]  NCHAR (5) NULL,
@@ -9,7 +10,8 @@
     [YearBuilt] SMALLINT NULL,
     [IsGroundRent] BIT NULL,
     [IsRedeemed] BIT NULL,
-    [DetailsNotLegible] BIT NULL,
+    [IsLegible] BIT NULL,
+    [NotLegibleList] NCHAR NULL,
     [PaymentAmount] SMALLMONEY NULL,
     [PaymentFrequency] NCHAR(50) NULL,
     [PaymentDateAnnual] SMALLDATETIME NULL,
@@ -18,5 +20,6 @@
     [PaymentDateQuarterly1] SMALLDATETIME NULL,
     [PaymentDateQuarterly2] SMALLDATETIME NULL,
     [PaymentDateQuarterly3] SMALLDATETIME NULL,
-    [PaymentDateQuarterly4] SMALLDATETIME NULL
+    [PaymentDateQuarterly4] SMALLDATETIME NULL,
+    [PaymentDateOther] SMALLDATETIME NULL
 )

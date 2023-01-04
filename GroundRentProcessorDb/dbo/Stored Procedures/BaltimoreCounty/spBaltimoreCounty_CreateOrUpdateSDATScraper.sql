@@ -1,21 +1,21 @@
-﻿CREATE PROCEDURE [dbo].[spGroundRentBaltimoreCity_CreateOrUpdateSDATIsGroundRent]
-	@AccountId NVARCHAR(16),
+﻿CREATE PROCEDURE [dbo].[spBaltimoreCounty_CreateOrUpdateSDATScraper]
+	@AccountId NCHAR(16),
     @IsGroundRent BIT
 AS
 SET NOCOUNT ON;
 	
 BEGIN
-	IF EXISTS (SELECT [AccountId] FROM dbo.[GroundRentBaltimoreCity] 
+	IF EXISTS (SELECT [AccountId] FROM dbo.[BaltimoreCounty] 
 	WHERE [AccountId] = @AccountId)
 BEGIN
-	UPDATE dbo.[GroundRentBaltimoreCity] SET
+	UPDATE dbo.[BaltimoreCounty] SET
 	[AccountId] = @AccountId,
     [IsGroundRent] = @IsGroundRent
 	WHERE [AccountId] = @AccountId
 END
 ELSE
 BEGIN
-	INSERT INTO dbo.[GroundRentBaltimoreCity](
+	INSERT INTO dbo.[BaltimoreCounty](
 	[AccountId],
     [IsGroundRent])
 
