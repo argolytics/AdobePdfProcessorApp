@@ -19,9 +19,9 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
     private int currentCount;
     private int totalCount;
     private decimal percentComplete;
-    private int amountToScrape = 40000;
+    private int amountToScrape = 3;
     private bool isRestartingScrape = false;
-    private List<AddressModel> RestartScrapeAddressList = new();
+    private List<AddressModel> AddressList = new();
 
     public MontgomeryCountyScraper(
         IDataContext dataContext,
@@ -37,17 +37,17 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
         FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
     }
     public void AllocateWebDrivers(
-        List<AddressModel> firefoxAddressList, int amountToScrape)
+        List<AddressModel> addressList, int amountToScrape)
     {
-        WebDriverModel firefoxDriverModel = new WebDriverModel
+        WebDriverModel webDriverModel = new()
         {
             Driver = FirefoxDriver,
             Input = FirefoxInput,
-            AddressList = firefoxAddressList
+            AddressList = addressList
         };
 
         List<Task> tasks = new();
-        tasks.Add(Task.Run(() => Scrape(firefoxDriverModel)));
+        tasks.Add(Task.Run(() => Scrape(webDriverModel)));
         Task.WaitAll(tasks.ToArray());
 
     }
@@ -67,9 +67,10 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
         try
         {
             Console.WriteLine($"{webDriverModel.Driver} begin...");
-            foreach (var address in webDriverModel.AddressList)
+            var iterList = webDriverModel.AddressList.ToList();
+            foreach (var address in iterList)
             {
-                currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
+                currentCount = iterList.IndexOf(address) + 1;
                 // Selecting "MONTGOMERY COUNTY"
                 webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlCounty > option:nth-child(17)")));
@@ -176,22 +177,14 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
                 }
             }
         }
-        catch (ArgumentNullException ex)
-        {
-            Console.WriteLine(ex.Message);
-            isRestartingScrape = true;
-        }
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
+            await RestartScrape(webDriverModel);
         }
         finally
         {
-            webDriverModel.Driver.Quit();
-            if (isRestartingScrape)
-            {
-                await RestartScrape(webDriverModel);
-            }
+            await RestartScrape(webDriverModel);
         }
     }
     private async Task RestartScrape(WebDriverModel webDriverModel)
@@ -200,17 +193,17 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
         using (var uow = _dataContext.CreateUnitOfWork())
         {
             var montgomeryCountyDataService = _montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-            RestartScrapeAddressList = await montgomeryCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
+            AddressList = await montgomeryCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
-        if (RestartScrapeAddressList.Count == 0)
+        if (AddressList.Count == 0)
         {
             webDriverModel.Driver.Quit();
             ReportTotals(webDriverModel);
         }
         else
         {
-            Console.WriteLine("Exception raised. Restarting scrape.");
-            AllocateWebDrivers(RestartScrapeAddressList, amountToScrape);
+            Console.WriteLine("Restarting scrape.");
+            AllocateWebDrivers(AddressList, amountToScrape);
         }
     }
     private void ReportTotals(WebDriverModel webDriverModel)

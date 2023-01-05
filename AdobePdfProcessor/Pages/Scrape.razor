@@ -21,28 +21,28 @@
 </div>
 
 @code {
-    private int _amountToScrape = 40000;
+    private int _amountToScrape = 3;
     private async Task ScrapeMontgomeryCounty(int amountToScrape)
     {
-        List<AddressModel> firefoxAddressList;
+        List<AddressModel> addressList;
         amountToScrape = _amountToScrape;
         using (var uow = dataContext.CreateUnitOfWork())
         {
             var montgomeryCountyDataService = montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-            firefoxAddressList = await montgomeryCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
+            addressList = await montgomeryCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
-        montgomeryCountyScraper.AllocateWebDrivers(firefoxAddressList, amountToScrape);
+        montgomeryCountyScraper.AllocateWebDrivers(addressList, amountToScrape);
     }
     private async Task ScrapeCecilCounty(int amountToScrape)
     {
-        List<AddressModel> firefoxAddressList;
+        List<AddressModel> addressList;
         amountToScrape = _amountToScrape;
         using (var uow = dataContext.CreateUnitOfWork())
         {
             var cecilCountyDataService = cecilCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-            firefoxAddressList = await cecilCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
+            addressList = await cecilCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
-        cecilCountyScraper.AllocateWebDrivers(firefoxAddressList, amountToScrape);
+        cecilCountyScraper.AllocateWebDrivers(addressList, amountToScrape);
     }
     private void CloseApp()
     {
