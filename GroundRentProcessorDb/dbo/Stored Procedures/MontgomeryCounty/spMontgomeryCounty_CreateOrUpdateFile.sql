@@ -1,8 +1,8 @@
-﻿CREATE PROCEDURE [dbo].[spMontgomeryCounty_CreateOrUpdateSpecPrintFile]
+﻿CREATE PROCEDURE [dbo].[spMontgomeryCounty_CreateOrUpdateFile]
 	@AccountId NCHAR(16),
 	@AccountNumber NCHAR(16),
     @Ward NCHAR (2),
-	@LandUseCode NCHAR (1),
+	@LandUseCode NCHAR (2),
 	@YearBuilt SMALLINT
 AS
 SET NOCOUNT ON;

@@ -4,37 +4,45 @@
 @using DataLibrary.Models
 @using DataLibrary.Services;
 @using DataLibrary.Services.SDATScrapers
-@inject IRealPropertySearchScraper scraper
 @inject IDataContext dataContext
-@inject IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory
+@inject MontgomeryCountyScraper montgomeryCountyScraper
+@inject CecilCountyScraper cecilCountyScraper
+@inject MontgomeryCountyDataServiceFactory montgomeryCountyDataServiceFactory
+@inject CecilCountyDataServiceFactory cecilCountyDataServiceFactory
 
 <div class="row mb-3 mt-3">
     <div class="container">
         <div>
-            <p>Click Once</p>
-            <button class="btn btn-danger" type="submit" @onclick="ScrapeSDAT">Scrape</button>
+            <button class="btn btn-danger" type="submit" @onclick="(() => ScrapeMontgomeryCounty(_amountToScrape))">ScrapeMontgomeryCounty</button>
+            <button class="btn btn-danger" type="submit" @onclick="(() => ScrapeCecilCounty(_amountToScrape))">ScrapeCecilCounty</button>
             @*<button class="btn btn-danger" type="submit" @onclick="CloseApp">CloseApp</button>*@
-        </div>
-    </div>
-    <div class="container">
-        <div>
-            <p>View the console window for progress related to the scrape.</p>
-            <p>When you need to close the app, simply close the console window.</p>
         </div>
     </div>
 </div>
 
 @code {
-    private int amountToScrape = 40000;
-    private async Task ScrapeSDAT()
+    private int _amountToScrape = 40000;
+    private async Task ScrapeMontgomeryCounty(int amountToScrape)
     {
         List<AddressModel> firefoxAddressList;
+        amountToScrape = _amountToScrape;
         using (var uow = dataContext.CreateUnitOfWork())
         {
-            var groundRentProcessorDataService = groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-            firefoxAddressList = await groundRentProcessorDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
+            var montgomeryCountyDataService = montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+            firefoxAddressList = await montgomeryCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
         }
-        scraper.AllocateWebDrivers(firefoxAddressList);
+        montgomeryCountyScraper.AllocateWebDrivers(firefoxAddressList, amountToScrape);
+    }
+    private async Task ScrapeCecilCounty(int amountToScrape)
+    {
+        List<AddressModel> firefoxAddressList;
+        amountToScrape = _amountToScrape;
+        using (var uow = dataContext.CreateUnitOfWork())
+        {
+            var cecilCountyDataService = cecilCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+            firefoxAddressList = await cecilCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
+        }
+        cecilCountyScraper.AllocateWebDrivers(firefoxAddressList, amountToScrape);
     }
     private void CloseApp()
     {

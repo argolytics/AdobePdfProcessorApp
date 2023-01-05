@@ -35,8 +35,10 @@ public class Program
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();
             builder.Services.AddScoped<IDataContext>(s => new DataContext(configuration.GetConnectionString("Default")));
-            builder.Services.AddScoped<IGroundRentProcessorDataServiceFactory, MontgomeryCountyDataServiceFactory>();
-            builder.Services.AddScoped<IRealPropertySearchScraper, MontgomeryCountyScraper>();
+            builder.Services.AddScoped<MontgomeryCountyDataServiceFactory>();
+            builder.Services.AddScoped<CecilCountyDataServiceFactory>();
+            builder.Services.AddScoped<MontgomeryCountyScraper>();
+            builder.Services.AddScoped<CecilCountyScraper>();
             builder.Services.AddAutoMapper(typeof(AutoMapperEntryPoint).Assembly);
             var mapper = new MapperConfiguration(options =>
             {

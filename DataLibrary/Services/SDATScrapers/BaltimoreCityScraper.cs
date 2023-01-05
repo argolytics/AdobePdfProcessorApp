@@ -39,7 +39,7 @@ public class BaltimoreCityScraper : IRealPropertySearchScraper
         FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
     }
     public void AllocateWebDrivers(
-        List<AddressModel> firefoxAddressList)
+        List<AddressModel> firefoxAddressList, int amountToScrape)
     {
         WebDriverModel firefoxDriverModel = new WebDriverModel
         {

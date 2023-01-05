@@ -1,21 +1,21 @@
-﻿CREATE PROCEDURE [dbo].[spAddress_CreateOrUpdateSDATScraper]
+﻿CREATE PROCEDURE [dbo].[spCecilCounty_CreateOrUpdateSDATScraper]
 	@AccountId NCHAR(16),
     @IsGroundRent BIT
 AS
 SET NOCOUNT ON;
 	
 BEGIN
-	IF EXISTS (SELECT [AccountId] FROM dbo.[Address] 
+	IF EXISTS (SELECT [AccountId] FROM dbo.[CecilCounty] 
 	WHERE [AccountId] = @AccountId)
 BEGIN
-	UPDATE dbo.[Address] SET
+	UPDATE dbo.[CecilCounty] SET
 	[AccountId] = @AccountId,
     [IsGroundRent] = @IsGroundRent
 	WHERE [AccountId] = @AccountId
 END
 ELSE
 BEGIN
-	INSERT INTO dbo.[Address](
+	INSERT INTO dbo.[CecilCounty](
 	[AccountId],
     [IsGroundRent])
 

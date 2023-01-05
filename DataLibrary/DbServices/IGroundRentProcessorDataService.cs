@@ -4,7 +4,7 @@ namespace DataLibrary.DbServices
 {
     public interface IGroundRentProcessorDataService
     {
-        Task CreateOrUpdateSpecPrintFile(AddressModel addressModel);
+        Task CreateOrUpdateFile(AddressModel addressModel);
         Task CreateOrUpdateSDATRedeemedFile(AddressModel addressModel);
         Task<bool> CreateOrUpdateSDATScraper(AddressModel addressModel);
         Task<bool> Delete(string accountId);

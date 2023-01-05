@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[BaltimoreCity]
+﻿CREATE TABLE [dbo].[CecilCounty]
 (
 	[AccountId]     NCHAR (16) NOT NULL,
     [County]        NCHAR (16) NULL,

@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using DataLibrary.JsonConverters;
+using System.Text.Json.Serialization;
 
 namespace DataLibrary.Dtos;
 
@@ -23,8 +24,10 @@ public class AddressDto
     public string? Lot { get; set; }
 
     [JsonPropertyName("land_use_code_mdp_field_lu_desclu_sdat_field_50")]
+    [JsonConverter(typeof(LandUseCodeJsonConverter))]
     public string? LandUseCode { get; set; }
 
     [JsonPropertyName("c_a_m_a_system_data_year_built_yyyy_mdp_field_yearblt_sdat_field_235")]
+    [JsonConverter(typeof(IntJsonConverter))]
     public int? YearBuilt { get; set; }
 }

@@ -13,7 +13,7 @@ public class BaltimoreCountySqlDataService : IGroundRentProcessorDataService
     {
         _unitOfWork = unitOfWork;
     }
-    public async Task CreateOrUpdateSpecPrintFile(AddressModel addressModel)
+    public async Task CreateOrUpdateFile(AddressModel addressModel)
     {
         var parms = new
         {
@@ -23,7 +23,7 @@ public class BaltimoreCountySqlDataService : IGroundRentProcessorDataService
             addressModel.LandUseCode,
             addressModel.YearBuilt
         };
-        await _unitOfWork.Connection.ExecuteAsync("spBaltimoreCounty_CreateOrUpdateSpecPrintFile", parms,
+        await _unitOfWork.Connection.ExecuteAsync("spBaltimoreCounty_CreateOrUpdateFile", parms,
             commandType: CommandType.StoredProcedure, transaction: _unitOfWork.Transaction);
     }
     public async Task CreateOrUpdateSDATRedeemedFile(AddressModel addressModel)

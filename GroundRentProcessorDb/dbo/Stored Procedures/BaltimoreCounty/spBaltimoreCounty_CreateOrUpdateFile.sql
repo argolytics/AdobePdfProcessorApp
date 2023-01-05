@@ -1,24 +1,20 @@
-﻿CREATE PROCEDURE [dbo].[spBaltimoreCity_CreateOrUpdateSpecPrintFile]
+﻿CREATE PROCEDURE [dbo].[spBaltimoreCounty_CreateOrUpdateFile]
 	@AccountId NCHAR(16),
+	@AccountNumber NCHAR(16),
     @Ward NCHAR (2),
-	@Section  NCHAR (2),
-    @Block  NCHAR (5),
-    @Lot  NCHAR (4),
-	@LandUseCode NCHAR (1),
+	@LandUseCode NCHAR (2),
 	@YearBuilt SMALLINT
 AS
 SET NOCOUNT ON;
 	
 BEGIN
-	IF EXISTS (SELECT [AccountId] FROM dbo.[BaltimoreCity] 
+	IF EXISTS (SELECT [AccountId] FROM dbo.[BaltimoreCounty] 
 	WHERE [AccountId] = @AccountId)
 BEGIN
-	UPDATE dbo.[BaltimoreCity] SET
+	UPDATE dbo.[BaltimoreCounty] SET
 	[AccountId] = @AccountId,
+	[AccountNumber] = @AccountNumber,
     [Ward] = @Ward,
-	[Section] = @Section,
-	[Block] = @Block,
-	[Lot] = @Lot,
 	[LandUseCode] = @LandUseCode,
 	[YearBuilt] = @YearBuilt
     
@@ -26,21 +22,17 @@ BEGIN
 END
 ELSE
 BEGIN
-	INSERT INTO dbo.[BaltimoreCity](
+	INSERT INTO dbo.[BaltimoreCounty](
 	[AccountId],
+	[AccountNumber],
     [Ward],
-	[Section],
-	[Block],
-	[Lot],
 	[LandUseCode],
 	[YearBuilt])
 
 	VALUES(
 	@AccountId,
+	@AccountNumber,
 	@Ward,
-	@Section,
-	@Block,
-	@Lot,
 	@LandUseCode,
 	@YearBuilt)
 END

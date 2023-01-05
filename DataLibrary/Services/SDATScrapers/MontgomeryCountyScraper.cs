@@ -11,26 +11,24 @@ namespace DataLibrary.Services.SDATScrapers;
 public class MontgomeryCountyScraper : IRealPropertySearchScraper
 {
     private readonly IDataContext _dataContext;
-    private readonly IGroundRentProcessorDataServiceFactory _groundRentProcessorDataServiceFactory;
+    private readonly MontgomeryCountyDataServiceFactory _montgomeryCountyDataServiceFactory;
     private WebDriver FirefoxDriver { get; set; } = null;
     private IWebElement FirefoxInput { get; set; }
     private string FirefoxDriverPath { get; set; } = @"C:\WebDrivers\geckodriver.exe";
     private string BaseUrl { get; set; } = "https://sdat.dat.maryland.gov/RealProperty/Pages/default.aspx";
+    private int currentCount;
+    private int totalCount;
+    private decimal percentComplete;
+    private int amountToScrape = 40000;
+    private bool isRestartingScrape = false;
+    private List<AddressModel> RestartScrapeAddressList = new();
 
     public MontgomeryCountyScraper(
         IDataContext dataContext,
-        IGroundRentProcessorDataServiceFactory groundRentProcessorDataServiceFactory)
+        MontgomeryCountyDataServiceFactory montgomeryCountyDataServiceFactory)
     {
         _dataContext = dataContext;
-        _groundRentProcessorDataServiceFactory = groundRentProcessorDataServiceFactory;
-
-        // For Amanda's laptop
-        //FirefoxProfile firefoxProfile = new(@"C:\Users\Jason Argo\AppData\Local\Mozilla\Firefox\Profiles\4x0ows5f.default-release-1670017618762");
-        //FirefoxOptions firefoxOptions = new();
-        //firefoxOptions.Profile = firefoxProfile;
-        //firefoxOptions.AddArguments("--headless");
-        //firefoxOptions.AddArguments("--binary C:\\Program Files\\Mozilla Firefox\\firefox.exe");
-        //FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
+        _montgomeryCountyDataServiceFactory = montgomeryCountyDataServiceFactory;
 
         FirefoxProfile firefoxProfile = new(@"C:\WebDrivers\FirefoxProfile-DetaultUser");
         FirefoxOptions firefoxOptions = new();
@@ -39,7 +37,7 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
         FirefoxDriver = new FirefoxDriver(FirefoxDriverPath, firefoxOptions, TimeSpan.FromSeconds(30));
     }
     public void AllocateWebDrivers(
-        List<AddressModel> firefoxAddressList)
+        List<AddressModel> firefoxAddressList, int amountToScrape)
     {
         WebDriverModel firefoxDriverModel = new WebDriverModel
         {
@@ -55,8 +53,7 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
     }
     public async Task Scrape(WebDriverModel webDriverModel)
     {
-        int currentCount;
-        var totalCount = webDriverModel.AddressList.Count;
+        totalCount = webDriverModel.AddressList.Count;
         bool result;
         bool checkingIfAddressExists = true;
 
@@ -73,7 +70,7 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
             foreach (var address in webDriverModel.AddressList)
             {
                 currentCount = webDriverModel.AddressList.IndexOf(address) + 1;
-                // Selecting "BALTIMORE COUNTY"
+                // Selecting "MONTGOMERY COUNTY"
                 webDriverModel.Driver.Navigate().GoToUrl(BaseUrl);
                 webDriverModel.Input = webDriverWait.Until(ExpectedConditions.ElementToBeClickable(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucSearchType_ddlCounty > option:nth-child(17)")));
                 webDriverModel.Input.Click();
@@ -107,8 +104,8 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
                         // Address does not exist in SDAT
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
-                            var groundRentProcessorDataService = _groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-                            result = await groundRentProcessorDataService.Delete(address.AccountId);
+                            var montgomeryCountyDataService = _montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                            result = await montgomeryCountyDataService.Delete(address.AccountId);
                             Console.WriteLine($"{address.AccountId.Trim()} does not exist and was deleted.");
                         }
                     }
@@ -125,7 +122,6 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
                     webDriverModel.Input.Click();
 
                     // Condition: check if html has ground rent error tag (meaning property has no ground rent registered)
-
                     if (webDriverModel.Driver.FindElements(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Count != 0)
                     {
                         if (webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr"))
@@ -135,25 +131,25 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
                             address.IsGroundRent = false;
                             using (var uow = _dataContext.CreateUnitOfWork())
                             {
-                                var groundRentProcessorDataService = _groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-                                result = await groundRentProcessorDataService.CreateOrUpdateSDATScraper(new AddressModel
+                                var montgomeryCountyDataService = _montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                                result = await montgomeryCountyDataService.CreateOrUpdateSDATScraper(new AddressModel
                                 {
                                     AccountId = address.AccountId,
                                     IsGroundRent = address.IsGroundRent
                                 });
-                                Console.WriteLine($"{address.AccountId.Trim()} is fee simple.");
+                                webDriverModel.AddressList.Remove(address);
                             }
                             if (result is false)
                             {
                                 // Something wrong happened and I do not want the application to skip over this address
                                 webDriverModel.Driver.Quit();
-                                Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
+                                Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Quitting scrape.");
                             }
                         }
                         else
                         {
-                            Console.WriteLine($"{webDriverModel.Driver} found {address.AccountId.Trim()} has a different error message than 'There is currently no ground rent' which is: {webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Text}. Quitting scrape.");
                             webDriverModel.Driver.Quit();
+                            Console.WriteLine($"{webDriverModel.Driver} found {address.AccountId.Trim()} has a different error message than 'There is currently no ground rent' which is: {webDriverModel.Driver.FindElement(By.CssSelector("#cphMainContentArea_ucSearchType_wzrdRealPropertySearch_ucGroundRent_lblErr")).Text}. Quitting scrape.");
                         }
                     }
                     else
@@ -162,46 +158,64 @@ public class MontgomeryCountyScraper : IRealPropertySearchScraper
                         address.IsGroundRent = true;
                         using (var uow = _dataContext.CreateUnitOfWork())
                         {
-                            var groundRentProcessorDataService = _groundRentProcessorDataServiceFactory.CreateGroundRentProcessorDataService(uow);
-                            result = await groundRentProcessorDataService.CreateOrUpdateSDATScraper(new AddressModel
+                            var montgomeryCountyDataService = _montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+                            result = await montgomeryCountyDataService.CreateOrUpdateSDATScraper(new AddressModel
                             {
                                 AccountId = address.AccountId,
                                 IsGroundRent = address.IsGroundRent
                             });
-                            Console.WriteLine($"{address.AccountId.Trim()} is ground rent.");
+                            webDriverModel.AddressList.Remove(address);
                         }
                         if (result is false)
                         {
                             // Something wrong happened and I do not want the application to skip over this address
                             webDriverModel.Driver.Quit();
-                            Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Call Jason.");
+                            Console.WriteLine($"Db could not complete transaction for {address.AccountId.Trim()}. Quitting scrape.");
                         }
                     }
-                    decimal percentComplete = decimal.Divide(currentCount, totalCount);
-                    Console.WriteLine($"{webDriverModel.Driver} has processed {percentComplete:P0} of addresses in list.");
                 }
             }
         }
-        catch (NoSuchElementException ex)
-        {
-            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
-        }
-        catch (StaleElementReferenceException ex)
-        {
-            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
-        }
         catch (ArgumentNullException ex)
         {
-            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
+            Console.WriteLine(ex.Message);
+            isRestartingScrape = true;
         }
-        catch (WebDriverException ex)
+        catch (Exception ex)
         {
-            Console.WriteLine($"{webDriverModel.Driver} ran into the following exception: {ex.Message}");
-            Thread.Sleep(3000);
+            Console.WriteLine(ex.Message);
         }
-        webDriverModel.Driver.Quit();
+        finally
+        {
+            webDriverModel.Driver.Quit();
+            if (isRestartingScrape)
+            {
+                await RestartScrape(webDriverModel);
+            }
+        }
+    }
+    private async Task RestartScrape(WebDriverModel webDriverModel)
+    {
+        webDriverModel.AddressList.Clear();
+        using (var uow = _dataContext.CreateUnitOfWork())
+        {
+            var montgomeryCountyDataService = _montgomeryCountyDataServiceFactory.CreateGroundRentProcessorDataService(uow);
+            RestartScrapeAddressList = await montgomeryCountyDataService.ReadTopAmountWhereIsGroundRentNull(amountToScrape);
+        }
+        if (RestartScrapeAddressList.Count == 0)
+        {
+            webDriverModel.Driver.Quit();
+            ReportTotals(webDriverModel);
+        }
+        else
+        {
+            Console.WriteLine("Exception raised. Restarting scrape.");
+            AllocateWebDrivers(RestartScrapeAddressList, amountToScrape);
+        }
+    }
+    private void ReportTotals(WebDriverModel webDriverModel)
+    {
+        percentComplete = decimal.Divide(currentCount, totalCount);
+        Console.WriteLine($"{webDriverModel.Driver} has processed {percentComplete:P0} of addresses in list.");
     }
 }
